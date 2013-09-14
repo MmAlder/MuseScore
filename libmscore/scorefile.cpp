@@ -105,6 +105,7 @@ void Score::write(Xml& xml, bool selectionOnly)
       xml.tag("showInvisible", _showInvisible);
       xml.tag("showUnprintable", _showUnprintable);
       xml.tag("showFrames", _showFrames);
+      xml.tag("showIntervalGuides", _showIntervalGuides);
       xml.tag("showMargins", _showPageborders);
 
       QMapIterator<QString, QString> i(_metaTags);
@@ -884,6 +885,8 @@ bool Score::read(XmlReader& e)
                   _showUnprintable = e.readInt();
             else if (tag == "showFrames")
                   _showFrames = e.readInt();
+            else if (tag == "showIntervalGuides")
+                  _showIntervalGuides = e.readInt();
             else if (tag == "showMargins")
                   _showPageborders = e.readInt();
             else if (tag == "Style") {

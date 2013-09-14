@@ -312,6 +312,7 @@ void Score::init()
       _showInvisible       = true;
       _showUnprintable     = true;
       _showFrames          = true;
+      _showIntervalGuides  = false;
       _showPageborders     = false;
       _showInstrumentNames = true;
       _showVBox            = true;
@@ -717,6 +718,17 @@ void Score::setShowUnprintable(bool v)
 void Score::setShowFrames(bool v)
       {
       _showFrames = v;
+      _updateAll  = true;
+      end();
+      }
+
+//---------------------------------------------------------
+//   setShowIntervalGuides
+//---------------------------------------------------------
+
+void Score::setShowIntervalGuides(bool v)
+      {
+      _showIntervalGuides = v;
       _updateAll  = true;
       end();
       }

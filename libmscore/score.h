@@ -315,6 +315,7 @@ class Score : public QObject {
       bool _showInvisible;
       bool _showUnprintable;
       bool _showFrames;
+      bool _showIntervalGuides;
       bool _showPageborders;
       bool _showInstrumentNames;
       bool _showVBox;
@@ -592,12 +593,14 @@ class Score : public QObject {
       bool showInvisible() const       { return _showInvisible; }
       bool showUnprintable() const     { return _showUnprintable; }
       bool showFrames() const          { return _showFrames; }
+      bool showIntervalGuides() const  { return _showIntervalGuides; }
       bool showPageborders() const     { return _showPageborders; }
       bool showInstrumentNames() const { return _showInstrumentNames; }
       bool showVBox() const            { return _showVBox; }
       void setShowInvisible(bool v);
       void setShowUnprintable(bool v);
       void setShowFrames(bool v);
+      void setShowIntervalGuides(bool v);
       void setShowPageborders(bool v);
       void setShowInstrumentNames(bool v) { _showInstrumentNames = v; }
       void setShowVBox(bool v)            { _showVBox = v;            }

@@ -308,6 +308,8 @@ Score::FileError Score::read114(XmlReader& e)
                   _showInvisible = e.readInt();
             else if (tag == "showFrames")
                   _showFrames = e.readInt();
+            else if (tag == "showIntervalGuides")
+                  _showIntervalGuides = e.readInt();
             else if (tag == "showMargins")
                   _showPageborders = e.readInt();
             else if (tag == "Style") {

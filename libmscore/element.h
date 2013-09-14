@@ -581,6 +581,8 @@ class StaffLines : public Element {
       qreal lw;
       int lines;
 
+      Segment* drawIntervalGuides(QPainter*, qreal x1, qreal x2, Segment* prevSegment) const;
+
    public:
       StaffLines(Score*);
       virtual StaffLines* clone() const    { return new StaffLines(*this); }

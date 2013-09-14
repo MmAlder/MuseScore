@@ -14,6 +14,7 @@
 #include "chord.h"
 #include "measure.h"
 #include "system.h"
+#include "staff.h"
 #include "score.h"
 
 namespace Ms {
@@ -27,6 +28,7 @@ LedgerLine::LedgerLine(Score* s)
       {
       setZ(NOTE * 100 - 50);
       setSelectable(false);
+      _staffLine = 0;
       _next = 0;
       }
 
@@ -72,6 +74,63 @@ void LedgerLine::draw(QPainter* painter) const
       if(chord()->crossMeasure() == CROSSMEASURE_SECOND)
             return;
       Line::draw(painter);
-      }
 
+      // Draw interval guide line if requested
+      if (!score()->showIntervalGuides())
+            return;
+
+      Staff* staff = chord()->staff();
+      if (!staff)
+            return;
+
+      if (staff->staffType()->group() != STANDARD_STAFF_GROUP)
+            return;
+
+      int tick        = chord()->tick();
+      ClefType clef   = staff->clef(tick);
+      int pitchOffset = clefTable[clef].pitchOffset;
+      int key         = staff->key(tick).accidentalType();
+
+      // scale degree of the note at this ledger line
+      int degree = (((7 - ((key + 7) / 2)) + (3 * ((key + 7) % 2)) + pitchOffset - _staffLine) % 7) + 1;
+
+      qDebug("  staffLine:%d pitchOffset:%d key: %d degree:%d\n", _staffLine, pitchOffset, key, degree);
+
+      QPointF _pos(0.0, 0.0);
+
+      qreal x1 = _pos.x();
+      qreal x2 = x1 + width();
+      qreal y  = _pos.y();
+      qreal lw = score()->styleS(ST_staffLineWidth).val() * spatium();
+
+      switch(degree) {
+             case 7:
+                   y -= spatium() * 0.25;
+                   painter->setPen(QPen(Qt::red, lw, Qt::SolidLine, Qt::FlatCap));
+                   painter->drawLine(QLineF(x1, y, x2, y));
+                   break;
+             case 6:
+             case 5:
+                   break;
+             case 4:
+                   y += spatium() * 0.25;
+                   painter->setPen(QPen(Qt::cyan, lw, Qt::SolidLine, Qt::FlatCap));
+                   painter->drawLine(QLineF(x1, y, x2, y));
+                   break;
+             case 3:
+                   y -= spatium() * 0.25;
+                   painter->setPen(QPen(Qt::cyan, lw, Qt::SolidLine, Qt::FlatCap));
+                   painter->drawLine(QLineF(x1, y, x2, y));
+                   break;
+             case 2:
+                   break;
+             case 1:
+                   y += spatium() * 0.25;
+                   painter->setPen(QPen(Qt::red, lw, Qt::SolidLine, Qt::FlatCap));
+                   painter->drawLine(QLineF(x1, y, x2, y));
+                   break;
+             default:
+                   break;
+             }
+      }
 }

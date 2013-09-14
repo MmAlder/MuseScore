@@ -1702,6 +1702,12 @@ Shortcut Shortcut::sc[] = {
       Shortcut(
          STATE_NORMAL | STATE_NOTE_ENTRY,
          A_SCORE,
+         "show-interval-guides",
+         QT_TRANSLATE_NOOP("action","Show Interval Guides")
+         ),
+      Shortcut(
+         STATE_NORMAL | STATE_NOTE_ENTRY,
+         A_SCORE,
          "show-pageborders",
          QT_TRANSLATE_NOOP("action","Show Page Margins")
          ),

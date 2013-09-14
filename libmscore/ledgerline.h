@@ -31,6 +31,7 @@ class Chord;
 class LedgerLine : public Line {
       Q_OBJECT
 
+      int         _staffLine;
       LedgerLine* _next;
 
    public:
@@ -43,6 +44,8 @@ class LedgerLine : public Line {
       virtual void layout();
       virtual void draw(QPainter*) const;
       qreal measureXPos() const;
+      int staffLine() const       { return _staffLine; }
+      void setStaffLine(int l)    { _staffLine = l; }
       LedgerLine* next() const    { return _next; }
       void setNext(LedgerLine* l) { _next = l;    }
       };

@@ -571,6 +571,7 @@ void Chord::addLedgerLine(int track, int line, bool visible, qreal x, Spatium le
 
       h->setLen(len);
       h->setPos(x, line * _spatium * .5);
+      h->setStaffLine(line);
       h->setNext(_ledgerLines);
       _ledgerLines = h;
       }
@@ -593,6 +594,7 @@ void Chord::createLedgerLines(int track, vector<LedgerLineData>& vecLines, bool 
             h->setVisible(lld.visible && visible);
             h->setLen(Spatium( (lld.maxX - lld.minX) / _spatium) );
             h->setPos(lld.minX, lld.line * _spatium * .5);
+            h->setStaffLine(lld.line);
             h->setNext(_ledgerLines);
             _ledgerLines = h;
             }

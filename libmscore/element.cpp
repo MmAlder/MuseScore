@@ -894,6 +894,9 @@ void StaffLines::draw(QPainter* painter) const
       qreal x1 = _pos.x();
       qreal x2 = x1 + width();
 
+      Segment* seg = 0;
+      while ( (seg = drawIntervalGuides(painter, x1, x2, seg)) != 0 ) {};
+
       QVector<QLineF> ll(lines);
       qreal y = _pos.y();
       for (int i = 0; i < lines; ++i) {
@@ -921,6 +924,73 @@ void StaffLines::draw(QPainter* painter) const
             }
       painter->setPen(QPen(curColor(), lw, Qt::SolidLine, Qt::FlatCap));
       painter->drawLines(ll);
+      }
+
+//---------------------------------------------------------
+//   drawIntervalGuides
+//---------------------------------------------------------
+
+Segment* StaffLines::drawIntervalGuides(QPainter* painter, qreal x1, qreal x2, Segment* prevSegment) const
+      {
+      if (!score()->showIntervalGuides())
+            return 0;
+
+      if (!staff())
+            return 0;
+
+      if (staff()->staffType()->group() != STANDARD_STAFF_GROUP)
+            return 0;
+
+      int x0        = measure()->pageX();
+      int xStart    = x1;
+      int xEnd      = x2;
+      int tick      = measure()->tick();
+      ClefType clef = staff()->clef(tick);
+
+      Segment* nextSegment = 0;
+      if (prevSegment) {
+            xStart = x1 + prevSegment->pageX() - x0;
+            tick   = prevSegment->tick();
+            clef   = staff()->clef(tick);
+            nextSegment = prevSegment->next(Segment::SegClef);
+            }
+      else {
+            nextSegment = measure()->first(Segment::SegClef);
+            }
+
+      if (nextSegment)
+            xEnd = x1 + nextSegment->pageX() - x0;
+
+      int pitchOffset = clefTable[clef].pitchOffset;
+      int key         = staff()->key(tick).accidentalType();
+
+      // offset from the top of the staff to the first mediant of the major scale
+      int offset = ((12 - ((key + 7) / 2)) + (3 * ((key + 7) % 2)) + pitchOffset) % 7;
+
+      qDebug("  pitchOffset:%d key:%d mediant offset:%d\n", pitchOffset, key, offset);
+
+      qreal y;
+      qreal first34 = (offset / 2.0) - 0.25;
+
+      painter->setPen(QPen(Qt::cyan, lw, Qt::SolidLine, Qt::FlatCap));
+      y = first34 * dist;
+      painter->drawLine(QLineF(xStart, y, xEnd, y));
+
+      if (first34 < 1.0) {
+            y = (first34 + 3.5) * dist;
+            painter->drawLine(QLineF(xStart, y, xEnd, y));
+            }
+
+      painter->setPen(QPen(Qt::red, lw, Qt::SolidLine, Qt::FlatCap));
+      y = (first34 + 1.5) * dist;
+      painter->drawLine(QLineF(xStart, y, xEnd, y));
+
+      if (first34 > 1.5) {
+            y = (first34 - 2.0) * dist;
+            painter->drawLine(QLineF(xStart, y, xEnd, y));
+            }
+
+      return nextSegment;
       }
 
 //---------------------------------------------------------

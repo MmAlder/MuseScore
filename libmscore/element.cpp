@@ -961,7 +961,7 @@ Segment* StaffLines::drawIntervalGuides(QPainter* painter, qreal x1, qreal x2, S
       if (nextSegment)
             xEnd = x1 + nextSegment->pageX() - x0;
 
-      int pitchOffset = clefTable[clef].pitchOffset;
+      int pitchOffset = ClefInfo::pitchOffset(clef);
       int key         = staff()->key(tick).accidentalType();
 
       // offset from the top of the staff to the first mediant of the major scale

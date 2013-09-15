@@ -88,7 +88,7 @@ void LedgerLine::draw(QPainter* painter) const
 
       int tick        = chord()->tick();
       ClefType clef   = staff->clef(tick);
-      int pitchOffset = clefTable[clef].pitchOffset;
+      int pitchOffset = ClefInfo::pitchOffset(clef);
       int key         = staff->key(tick).accidentalType();
 
       // scale degree of the note at this ledger line

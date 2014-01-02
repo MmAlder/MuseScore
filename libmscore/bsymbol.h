@@ -44,7 +44,7 @@ class BSymbol : public Element, public ElementLayout {
       virtual bool acceptDrop(MuseScoreView*, const QPointF&, Element*) const;
       virtual Element* drop(const DropData&);
       virtual void layout();
-      virtual QRectF drag(const EditData& pos);
+      virtual QRectF drag(EditData*) override;
 
       void writeProperties(Xml& xml) const;
       bool readProperties(XmlReader&);
@@ -60,7 +60,6 @@ class BSymbol : public Element, public ElementLayout {
       bool systemFlag() const             { return _systemFlag; }
       void setSystemFlag(bool val)        { _systemFlag = val;  }
       };
-
 
 }     // namespace Ms
 #endif

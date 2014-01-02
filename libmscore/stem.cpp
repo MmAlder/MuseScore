@@ -95,10 +95,9 @@ void Stem::layout()
             else {                              // non-TAB
                   // move stem start to note attach point
                   Note* n  = up() ? chord()->downNote() : chord()->upNote();
-                  const Sym& sym = symbols[score()->symIdx()][n->noteHead()];
                   if (n->mirror())
                         _up *= -1;
-                  y1 -= sym.attach(n->magS()).y() * _up;
+                  y1 -= n->attach().y() * _up;
                   }
             }
 
@@ -192,8 +191,7 @@ void Stem::draw(QPainter* painter) const
       int nDots = chord()->dots();
       if (nDots > 0 && !stt->stemThrough()) {
             qreal y =  ( (STAFFTYPE_TAB_DEFAULTSTEMLEN_DN * 0.2) * sp) * (_up ? -1.0 : 1.0);
-            symbols[score()->symIdx()][dotSym].draw(painter, magS(),
-                        QPointF(STAFFTYPE_TAB_DEFAULTDOTDIST_X * sp, y), nDots);
+            drawSymbol(SymId::augmentationDot, painter, QPointF(STAFFTYPE_TAB_DEFAULTDOTDIST_X * sp, y), nDots);
             }
       }
 
@@ -237,6 +235,15 @@ void Stem::updateGrips(int* grips, QRectF* grip) const
       {
       *grips   = 1;
       grip[0].translate(pagePos() + line.p2());
+      }
+
+//---------------------------------------------------------
+//   startEdit
+//---------------------------------------------------------
+
+void Stem::startEdit(MuseScoreView*, const QPointF&)
+      {
+      undoPushProperty(P_USER_LEN);
       }
 
 //---------------------------------------------------------
@@ -339,7 +346,6 @@ QPointF Stem::hookPos() const
 
       qreal xoff = lineWidth() * .5;
       p.rx() += xoff;
-
       return p;
       }
 

@@ -20,18 +20,18 @@ extern Preferences preferences;
 
 namespace MidiLyrics {
 
-const QString META_PREFIX = "@";
-const QString TEXT_PREFIX = "@T";
+const std::string META_PREFIX = "@";
+const std::string TEXT_PREFIX = "@T";
 
 
-bool isMetaText(const QString &text)
+bool isMetaText(const std::string &text)
       {
-      return text.left(META_PREFIX.size()) == META_PREFIX;
+      return text.substr(0, META_PREFIX.size()) == META_PREFIX;
       }
 
-bool isLyricText(const QString &text)
+bool isLyricText(const std::string &text)
       {
-      return !isMetaText(text) || text.left(TEXT_PREFIX.size()) == TEXT_PREFIX;
+      return !isMetaText(text) || text.substr(0, TEXT_PREFIX.size()) == TEXT_PREFIX;
       }
 
 bool isLyricEvent(const MidiEvent &e)
@@ -40,39 +40,19 @@ bool isLyricEvent(const MidiEvent &e)
                                      || e.metaType() == META_LYRIC);
       }
 
-bool isLyricsTrack(const MidiTrack &lyricsTrack)
-      {
-      bool lyricsFlag = false;
-
-      for (const auto &i: lyricsTrack.events()) {
-            const auto& e = i.second;
-            if (isLyricEvent(e)) {
-                  const uchar* data = (uchar*)e.edata();
-                  QString text((char*)data);
-                  if (isLyricText(text)) {
-                        if (!lyricsFlag)
-                              lyricsFlag = true;
-                        }
-                  }
-            else if (e.type() == ME_NOTE)
-                  return false;
-            }
-
-      return lyricsFlag;
-      }
-
-std::multimap<ReducedFraction, QString>
+std::multimap<ReducedFraction, std::string>
 extractLyricsFromTrack(const MidiTrack &lyricsTrack, int division)
       {
-      std::multimap<ReducedFraction, QString> lyrics;
+      std::multimap<ReducedFraction, std::string> lyrics;
 
       for (const auto &i: lyricsTrack.events()) {
             const auto& e = i.second;
             if (isLyricEvent(e)) {
                   const uchar* data = (uchar*)e.edata();
-                  QString text((char*)data);
+                  std::string text = MidiCharset::fromUchar(data);
                   if (isLyricText(text)) {
                         const auto tick = toMuseScoreTicks(i.first, division);
+                                    // no charset handling here
                         lyrics.insert({tick, text});
                         }
                   }
@@ -84,7 +64,7 @@ extractLyricsFromTrack(const MidiTrack &lyricsTrack, int division)
 // it will be the track with max onTime match cases, except drum tracks
 
 int findBestTrack(const QList<MTrack> &tracks,
-                  const std::multimap<ReducedFraction, QString> &lyricTrack,
+                  const std::multimap<ReducedFraction, std::string> &lyricTrack,
                   const std::set<int> &usedTracks)
       {
       int bestTrack = -1;
@@ -111,7 +91,7 @@ int findBestTrack(const QList<MTrack> &tracks,
 
 void addTitle(Score *score, const QString &string, int *textCounter)
       {
-      if (string.left(TEXT_PREFIX.size()) == TEXT_PREFIX) {
+      if (string.left(TEXT_PREFIX.size()) == QString::fromStdString(TEXT_PREFIX)) {
             ++*textCounter;
             Text* text = new Text(score);
             if (*textCounter == 1)
@@ -131,16 +111,26 @@ void addTitle(Score *score, const QString &string, int *textCounter)
             }
       }
 
+// remove slashes in kar format
+
 QString removeSlashes(const QString &text)
       {
       QString newText = text;
-                  // remove slashes in kar format
       newText = newText.replace("/", "");
       newText = newText.replace("\\", "");
       return newText;
       }
 
-void addLyricsToScore(const std::multimap<ReducedFraction, QString> &lyricTrack,
+std::string removeSlashes(const std::string &text)
+      {
+      std::string str = text;
+      char chars[] = "/\\";
+      for (unsigned int i = 0; i != strlen(chars); ++i)
+            str.erase(std::remove(str.begin(), str.end(), chars[i]), str.end());
+      return str;
+      }
+
+void addLyricsToScore(const std::multimap<ReducedFraction, std::string> &lyricTrack,
                       const Staff *staffAddTo)
       {
       Score *score = staffAddTo->score();
@@ -148,11 +138,12 @@ void addLyricsToScore(const std::multimap<ReducedFraction, QString> &lyricTrack,
 
       for (const auto &e: lyricTrack) {
             const auto &tick = e.first;
+            QString str = MidiCharset::convertToCharset(e.second);
             if (tick == ReducedFraction(0, 1)) {
-                  addTitle(score, e.second, &textCounter);
+                  addTitle(score, str, &textCounter);
                   }
             else {
-                  QString text = removeSlashes(e.second);
+                  QString text = removeSlashes(str);
                   score->addLyrics(tick.ticks(), staffAddTo->idx(), text);
                   }
             }
@@ -161,14 +152,13 @@ void addLyricsToScore(const std::multimap<ReducedFraction, QString> &lyricTrack,
 void extractLyricsToMidiData(const MidiFile *mf)
       {
       for (const auto &t: mf->tracks()) {
-            if (!isLyricsTrack(t))
-                  continue;
-            preferences.midiImportOperations.addTrackLyrics(
-                                     extractLyricsFromTrack(t, mf->division()));
+            const auto lyrics = extractLyricsFromTrack(t, mf->division());
+            if (!lyrics.empty())
+                  preferences.midiImportOperations.addTrackLyrics(lyrics);
             }
       }
 
-void setInitialIndexes(QList<MTrack> &tracks)
+void assignLyricsToTracks(QList<MTrack> &tracks)
       {
       std::set<int> usedTracks;
       const auto *lyricTracks = preferences.midiImportOperations.getLyrics();
@@ -213,10 +203,10 @@ void setLyricsFromOperations(const QList<MTrack> &tracks)
             }
       }
 
-void setLyrics(const MidiFile *mf, const QList<MTrack> &tracks)
+void setLyricsToScore(const MidiFile *mf, const QList<MTrack> &tracks)
       {
       if (preferences.midiImportOperations.count() == 0) {
-            MidiLyrics::extractLyricsToMidiData(mf);
+            extractLyricsToMidiData(mf);
             setInitialLyricsFromMidiData(tracks);
             }
       else {
@@ -224,29 +214,31 @@ void setLyrics(const MidiFile *mf, const QList<MTrack> &tracks)
             }
       }
 
-QStringList makeLyricsList()
+QList<std::string> makeLyricsListForUI()
       {
-      QStringList list;
+      QList<std::string> list;
       const auto *lyrics = preferences.midiImportOperations.getLyrics();
       if (!lyrics)
             return list;
-      const int symbolLimit = 20;
+      const unsigned int symbolLimit = 16;
 
       for (const auto &trackLyric: *lyrics) {
-            QString lyricText;
+            std::string lyricText;
 
             for (const auto &lyric: trackLyric) {
-                  const QString &text = removeSlashes(lyric.second);
+                  const auto &text = removeSlashes(lyric.second);
                   if (isMetaText(text))
                         continue;
-                  if (!lyricText.isEmpty())
+                  if (!lyricText.empty())
                         lyricText += " ";       // visual text delimeter
                   if (lyricText.size() + text.size() > symbolLimit)
-                        lyricText += text.left(symbolLimit - lyricText.size());
+                        lyricText += text.substr(0, symbolLimit - lyricText.size());
                   else
                         lyricText += text;
-                  if (lyricText.size() >= symbolLimit - 1)
+                  if (lyricText.size() >= symbolLimit - 1) {
+                        lyricText += "...";
                         break;
+                        }
                   }
             list.push_back(lyricText);
             }

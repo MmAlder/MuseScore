@@ -869,7 +869,7 @@ Shortcut Shortcut::sc[] = {
          STATE_NORMAL | STATE_NOTE_ENTRY,
          0,
          "insert-fretframe",
-         QT_TRANSLATE_NOOP("action","Insert Fret Diagram Frame"),
+         QT_TRANSLATE_NOOP("action","Insert Fretboard Diagram Frame"),
          fframe_ICON
          ),
       Shortcut(
@@ -1155,7 +1155,7 @@ Shortcut Shortcut::sc[] = {
        /* no stroke: 4th*/
         "grace4",
         QT_TRANSLATE_NOOP("action","Grace: quarter"),
-        QT_TRANSLATE_NOOP("action","Add quarter grace node"),
+        QT_TRANSLATE_NOOP("action","Add quarter grace note"),
         QT_TRANSLATE_NOOP("action","Grace: quarter"),
          grace4_ICON
         ),
@@ -1429,15 +1429,8 @@ Shortcut Shortcut::sc[] = {
          STATE_NORMAL | STATE_NOTE_ENTRY,
          0,
          "chord-text",
-         QT_TRANSLATE_NOOP("action","Chord Name"),
-         QT_TRANSLATE_NOOP("action","Add chord name")
-         ),
-      Shortcut(
-         STATE_NORMAL | STATE_NOTE_ENTRY,
-         A_CMD,
-         "harmony-properties",
-         QT_TRANSLATE_NOOP("action","Harmony Properties"),
-         QT_TRANSLATE_NOOP("action","Show harmony properties for chord")
+         QT_TRANSLATE_NOOP("action","Chord Symbol"),
+         QT_TRANSLATE_NOOP("action","Add chord symbol")
          ),
       Shortcut(
          STATE_NORMAL | STATE_NOTE_ENTRY,
@@ -1799,8 +1792,8 @@ Shortcut Shortcut::sc[] = {
          STATE_NORMAL | STATE_NOTE_ENTRY,
          0,
          "edit-harmony",
-         QT_TRANSLATE_NOOP("action","Chordnames..."),
-         QT_TRANSLATE_NOOP("action","Edit chord style")
+         QT_TRANSLATE_NOOP("action","Chord Symbols..."),
+         QT_TRANSLATE_NOOP("action","Edit chord symbols style")
          ),
       Shortcut(
          STATE_NORMAL | STATE_NOTE_ENTRY,
@@ -2036,6 +2029,13 @@ Shortcut Shortcut::sc[] = {
          QT_TRANSLATE_NOOP("action","Show inspector")
          ),
       Shortcut(
+         STATE_ALL,
+         0,
+         "resource-manager",
+         Qt::ApplicationShortcut,
+         QT_TRANSLATE_NOOP("action", "Resource Manager")
+         ),
+      Shortcut(
          STATE_NORMAL | STATE_NOTE_ENTRY | STATE_PLAY | STATE_EDIT | STATE_LYRICS_EDIT,
          0,
          "omr",
@@ -2077,6 +2077,15 @@ Shortcut Shortcut::sc[] = {
          QT_TRANSLATE_NOOP("action","Toggle metronome playback"),
          QT_TRANSLATE_NOOP("action","Play metronome during playback"),
          metronome_ICON
+         ),
+      Shortcut(
+         STATE_NORMAL | STATE_NOTE_ENTRY | STATE_PLAY | STATE_EDIT | STATE_LYRICS_EDIT,
+         0,
+         "countin",
+         QT_TRANSLATE_NOOP("action","Count-in"),
+         QT_TRANSLATE_NOOP("action","Toggle count-in playback"),
+         QT_TRANSLATE_NOOP("action","Play count-in at playback start"),
+         countin_ICON
          ),
       Shortcut(
          STATE_NORMAL | STATE_NOTE_ENTRY,
@@ -2270,6 +2279,14 @@ Shortcut Shortcut::sc[] = {
       Shortcut(
          STATE_NOTE_ENTRY_TAB,
          0,
+         "rest-TAB",
+         QT_TRANSLATE_NOOP("action","Rest (TAB)"),
+         QT_TRANSLATE_NOOP("action","Enter rest (TAB)"),
+         quartrest_ICON
+         ),
+      Shortcut(
+         STATE_NOTE_ENTRY_TAB,
+         0,
          "pad-rest-TAB",
          QT_TRANSLATE_NOOP("action","Rest (TAB)"),
          QT_TRANSLATE_NOOP("action","Note entry: rest (TAB)")
@@ -2440,13 +2457,13 @@ Shortcut Shortcut::sc[] = {
          STATE_HARMONY_FIGBASS_EDIT,
          0,
          "prev-beat-TEXT",
-         QT_TRANSLATE_NOOP("action","Previous beat (Harmony)")
+         QT_TRANSLATE_NOOP("action","Previous beat (Chord symbol)")
          ),
       Shortcut(
          STATE_HARMONY_FIGBASS_EDIT,
          0,
          "next-beat-TEXT",
-         QT_TRANSLATE_NOOP("action","Next beat (Harmony)")
+         QT_TRANSLATE_NOOP("action","Next beat (Chord symbol)")
          ),
       Shortcut(
          STATE_NORMAL | STATE_NOTE_ENTRY,
@@ -2454,6 +2471,12 @@ Shortcut Shortcut::sc[] = {
          "add-brackets",
          QT_TRANSLATE_NOOP("action","Add brackets to notehead"),
          brackets_ICON
+         ),
+      Shortcut(
+         STATE_NORMAL,
+         A_CMD,
+         "toggle-mmrest",
+         QT_TRANSLATE_NOOP("action","toggle create multi measure rest")
          ),
       // xml==0  marks end of list
       Shortcut(0, 0, 0, 0)

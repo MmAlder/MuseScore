@@ -26,7 +26,7 @@ ShadowNote::ShadowNote(Score* s)
    : Element(s)
       {
       _line = 1000;
-      sym   = 0;
+      sym   = SymId::noSym;
       }
 
 //---------------------------------------------------------
@@ -35,7 +35,7 @@ ShadowNote::ShadowNote(Score* s)
 
 void ShadowNote::draw(QPainter* painter) const
       {
-      if (!visible() || sym == 0)
+      if (!visible() || sym == SymId::noSym)
             return;
 
       QPointF ap(pagePos());
@@ -53,15 +53,15 @@ void ShadowNote::draw(QPainter* painter) const
       QPen pen(MScore::selectColor[voice].lighter(140), lw);
       painter->setPen(pen);
 
-      sym->draw(painter, magS());
+      drawSymbol(sym, painter);
 
       qreal ms = spatium();
 
-      qreal x1 = sym->width(magS())*.5 - (ms * mag());
+      qreal x1 = symWidth(sym) * .5 - (ms * mag());
       qreal x2 = x1 + 2 * ms * mag();
 
       ms *= .5;
-      if (_line < 100 && _line > -100 && !ps.rest) {
+      if (_line < 100 && _line > -100 && !ps.rest()) {
             for (int i = -2; i >= _line; i -= 2) {
                   qreal y = ms * mag() * (i - _line);
                   painter->drawLine(QLineF(x1, y, x2, y));
@@ -80,20 +80,20 @@ void ShadowNote::draw(QPainter* painter) const
 
 void ShadowNote::layout()
       {
-      if (sym == 0) {
+      if (sym == SymId::noSym) {
             setbbox(QRectF());
             return;
             }
-      QRectF b = sym->bbox(magS());
+      QRectF b(symBbox(sym));
       qreal _spatium = spatium();
       qreal lw = point(score()->styleS(ST_ledgerLineWidth));
 
-      qreal x1 = sym->width(magS())*.5 - (_spatium * mag()) - lw * .5;
+      qreal x1 = symWidth(sym) * .5 - (_spatium * mag()) - lw * .5;
       qreal x2 = x1 + 2 * _spatium * mag() + lw * .5;
 
       InputState ps = score()->inputState();
       QRectF r(x1, -lw * .5, x2 - x1, lw);
-      if (_line < 100 && _line > -100 && !ps.rest) {
+      if (_line < 100 && _line > -100 && !ps.rest()) {
             for (int i = -2; i >= _line; i -= 2)
                   b |= r.translated(QPointF(0, _spatium * .5 * (i - _line)));
             for (int i = 10; i <= _line; i += 2)

@@ -406,7 +406,7 @@
     </SC>
   <SC>
     <key>append-measures</key>
-    <seq>Ctrl+Shift+B</seq>
+    <seq>Alt+Shift+B</seq>
     </SC>
   <SC>
     <key>insert-measure</key>
@@ -553,10 +553,6 @@
     <seq>Ctrl+K</seq>
     </SC>
   <SC>
-    <key>harmony-properties</key>
-    <seq>Shift+K</seq>
-    </SC>
-  <SC>
     <key>rehearsalmark-text</key>
     <seq>Ctrl+M</seq>
     </SC>
@@ -693,10 +689,6 @@
     <seq>Ctrl+F11</seq>
     </SC>
   <SC>
-    <key>show-omr</key>
-    <seq>Ctrl+O</seq>
-    </SC>
-  <SC>
     <key>fullscreen</key>
     <seq>Ctrl+U</seq>
     </SC>
@@ -824,6 +816,10 @@
     <seq>Q</seq>
     </SC>
   <SC>
+    <key>rest-TAB</key>
+    <seq>;</seq>
+    </SC>
+  <SC>
     <key>string-above</key>
     <seq>Up</seq>
     </SC>
@@ -881,6 +877,7 @@
     <seq>9</seq>
     <seq>K</seq>
     </SC>
+<!-- HARMONY / FIGURED BASS specific shortcuts -->
   <SC>
     <key>advance-longa</key>
     <seq>Ctrl+9</seq>
@@ -932,6 +929,10 @@
   <SC>
     <key>next-beat-TEXT</key>
     <seq>;</seq>
+    </SC>
+  <SC>
+    <key>toggle-mmrest</key>
+    <seq>M</seq>
     </SC>
   </Shortcuts>
 

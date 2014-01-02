@@ -57,12 +57,12 @@
      </item>
      <item>
       <property name="text">
-       <string>Arpeggio &amp; Glissando</string>
+       <string>Arpeggios &amp; Glissandi</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Breath &amp; Pauses</string>
+       <string>Breaths &amp; Pauses</string>
       </property>
      </item>
      <item>
@@ -107,17 +107,22 @@
      </item>
      <item>
       <property name="text">
+       <string>Tempo</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
        <string>Text</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Breaks &amp; Spacer</string>
+       <string>Breaks &amp; Spacers</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Bagpipe</string>
+       <string>Bagpipe Embellishments</string>
       </property>
      </item>
      <item>

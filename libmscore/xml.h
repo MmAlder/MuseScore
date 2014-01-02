@@ -26,6 +26,16 @@ class Tuplet;
 class ClefList;
 
 //---------------------------------------------------------
+//   SpannerValues
+//---------------------------------------------------------
+
+struct SpannerValues {
+      int spannerId;
+      int tick2;
+      int track2;
+      };
+
+//---------------------------------------------------------
 //   XmlReader
 //---------------------------------------------------------
 
@@ -37,12 +47,13 @@ class XmlReader : public QXmlStreamReader {
       int _track;
       QList<Beam*>    _beams;
       QList<Tuplet*>  _tuplets;
+      QList<SpannerValues> _spannerValues;
 
    public:
       XmlReader(QFile*);
-      XmlReader(const QByteArray& d);
-      XmlReader(QIODevice* d);
-      XmlReader(const QString& d);
+      XmlReader(const QByteArray& d, const QString& s = QString());
+      XmlReader(QIODevice* d, const QString& s = QString());
+      XmlReader(const QString& d, const QString& s = QString());
 
       void unknown() const;
 
@@ -78,8 +89,10 @@ class XmlReader : public QXmlStreamReader {
       Beam* findBeam(int) const;
       Tuplet* findTuplet(int) const;
 
-      QList<Tuplet*>& tuplets()        { return _tuplets; }
-      QList<Beam*>& beams()            { return _beams; }
+      QList<Tuplet*>& tuplets()                      { return _tuplets; }
+      QList<Beam*>& beams()                          { return _beams; }
+      void addSpannerValues(const SpannerValues& sv) { _spannerValues.append(sv); }
+      const SpannerValues* spannerValues(int id);
       };
 
 //---------------------------------------------------------

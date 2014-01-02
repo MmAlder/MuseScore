@@ -40,12 +40,13 @@
 #include "libmscore/stafftype.h"
 #include "libmscore/style.h"
 #include "libmscore/system.h"
-#include "libmscore/tablature.h"
+#include "libmscore/stringdata.h"
 #include "libmscore/undo.h"
 #include "libmscore/keysig.h"
 
 namespace Ms {
 
+extern bool useFactorySettings;
 void filterInstruments(QTreeWidget *instrumentList, const QString &searchPhrase = QString(""));
 
 //---------------------------------------------------------
@@ -98,9 +99,9 @@ void StaffListItem::initStaffTypeCombo(bool forceRecreate)
       PartListItem* part = static_cast<PartListItem*>(QTreeWidgetItem::parent());
       // PartListItem has different members filled out if used in New Score Wizard or in Instruments Wizard
       if (part) {
-            Tablature* tab = part->it ? part->it->tablature :
-                        ( (part->part && part->part->instr(0)) ? part->part->instr(0)->tablature() : 0);
-            canUseTabs = tab && tab->strings() > 0;
+            StringData* stringData = part->it ? part->it->stringData :
+                        ( (part->part && part->part->instr(0)) ? part->part->instr(0)->stringData() : 0);
+            canUseTabs = stringData && stringData->strings() > 0;
             canUsePerc = part->it ? part->it->useDrumset :
                         ( (part->part && part->part->instr(0)) ? part->part->instr(0)->useDrumset() : false);
             }
@@ -388,6 +389,15 @@ InstrumentsDialog::InstrumentsDialog(QWidget* parent)
       downButton->setEnabled(false);
       belowButton->setEnabled(false);
       linkedButton->setEnabled(false);
+
+      if (!useFactorySettings) {
+            QSettings settings;
+            settings.beginGroup("Instruments");
+            resize(settings.value("size", QSize(800, 500)).toSize());
+            move(settings.value("pos", QPoint(10, 10)).toPoint());
+            settings.endGroup();
+            }
+
       connect(instrumentList, SIGNAL(clicked(const QModelIndex &)), SLOT(expandOrCollapse(const QModelIndex &)));
       }
 
@@ -923,9 +933,9 @@ void MuseScore::editInstrList()
                   firstStaff = s;
                   break;
                   }
-      }
+            }
       //normalize the keyevent to concert pitch if necessary
-      if(firstStaff && !rootScore->styleB(ST_concertPitch) && firstStaff->part()->instr()->transpose().chromatic ) {
+      if (firstStaff && !rootScore->styleB(ST_concertPitch) && firstStaff->part()->instr()->transpose().chromatic ) {
                   int interval = firstStaff->part()->instr()->transpose().chromatic;
                   for (auto i = tmpKeymap.begin(); i != tmpKeymap.end(); ++i) {
                         int tick = i->first;
@@ -1005,13 +1015,19 @@ void MuseScore::editInstrList()
                   rootScore->undoInsertPart(part, staffIdx);
                   for(Staff* s : nonLinked) {
                         int si = rootScore->staffIdx(s);
-                        for (Measure* m = rootScore->firstMeasure(); m; m = m->nextMeasure())
+                        for (Measure* m = rootScore->firstMeasure(); m; m = m->nextMeasure()) {
                               m->cmdAddStaves(si, si + 1, true);
+                              if (m->hasMMRest())
+                                    m->mmRest()->cmdAddStaves(si, si + 1, true);
+                              }
                         }
                   for(Staff* s : linked) {
                         int si = rootScore->staffIdx(s);
-                        for (Measure* m = rootScore->firstMeasure(); m; m = m->nextMeasure())
+                        for (Measure* m = rootScore->firstMeasure(); m; m = m->nextMeasure()) {
                               m->cmdAddStaves(si, si + 1, false);
+                              if (m->hasMMRest())
+                                    m->mmRest()->cmdAddStaves(si, si + 1, true);
+                              }
                         }
                   int sidx = rootScore->staffIdx(part);
                   int eidx = sidx + part->nstaves();
@@ -1039,6 +1055,8 @@ void MuseScore::editInstrList()
                                           continue;
                                     Measure* m = (Measure*)mb;
                                     m->cmdRemoveStaves(sidx, eidx);
+                                    if (m->hasMMRest())
+                                          m->mmRest()->cmdRemoveStaves(sidx, eidx);
                                     }
 /*                              foreach(Beam* e, rootScore->beams()) {
                                     int staffIdx = e->staffIdx();
@@ -1058,6 +1076,8 @@ void MuseScore::editInstrList()
                               for (Measure* m = rootScore->firstMeasure(); m; m = m->nextMeasure()) {
                                     // do not create whole measure rests for linked staves
                                     m->cmdAddStaves(staffIdx, staffIdx+1, !sli->linked());
+                                    if (m->hasMMRest())
+                                          m->mmRest()->cmdAddStaves(staffIdx, staffIdx+1, !sli->linked());
                                     }
 
                               rootScore->adjustBracketsIns(staffIdx, staffIdx+1);
@@ -1105,7 +1125,7 @@ void MuseScore::editInstrList()
 
                               // use selected staff type
                               if (st != staff->staffType())
-                                    rootScore->undo(new ChangeStaff(staff, staff->small(), staff->invisible(), staff->userDist(), st));
+                                    rootScore->undo(new ChangeStaff(staff, staff->small(), staff->invisible(), staff->userDist(), staff->color(), st));
                               if (updateNeeded)
                                     rootScore->cmdUpdateNotes();
                               }
@@ -1176,6 +1196,14 @@ void MuseScore::editInstrList()
       //
       if (rootScore->measures()->size() == 0)
             rootScore->insertMeasure(Element::MEASURE, 0, false);
+
+      QList<Score*> toDelete;
+      for (Excerpt* excpt : rootScore->excerpts()) {
+            if (excpt->score()->staves().size() == 0)
+                  toDelete.append(excpt->score());
+            }
+      for(Score* s: toDelete)
+            rootScore->undo(new RemoveExcerpt(s));
 
       rootScore->setLayoutAll(true);
       rootScore->endCmd();
@@ -1341,5 +1369,18 @@ void InstrumentsDialog::filterInstrumentsByGenre(QTreeWidget *instrumentList, QS
                   }
             ++iList;
             }
+      }
+
+//---------------------------------------------------------
+//   writeSettings
+//---------------------------------------------------------
+
+void InstrumentsDialog::writeSettings()
+      {
+      QSettings settings;
+      settings.beginGroup("Instruments");
+      settings.setValue("size", size());
+      settings.setValue("pos", pos());
+      settings.endGroup();
       }
 }

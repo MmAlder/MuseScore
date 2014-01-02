@@ -11,7 +11,7 @@
 //=============================================================================
 
 #ifndef __INSPECTOR_NOTE_H__
-#define __INSPECTOR_NOTE__H__
+#define __INSPECTOR_NOTE_H__
 
 #include "inspector.h"
 #include "inspectorBase.h"

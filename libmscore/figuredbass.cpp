@@ -19,6 +19,7 @@
 #include "chord.h"
 #include "rest.h"
 #include "score.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -445,7 +446,7 @@ void FiguredBassItem::layout()
       QFontMetrics      fm(f);
 
       QString           str = QString();
-      x = symbols[score()->symIdx()][quartheadSym].width(magS()) * .5;
+      x = symWidth(SymId::noteheadBlack) * .5;
       x1 = x2 = 0.0;
 
       // create display text

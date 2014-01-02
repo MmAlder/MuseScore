@@ -53,6 +53,8 @@
 #include "importmidi_lrhand.h"
 #include "importmidi_lyrics.h"
 
+#include <set>
+
 
 namespace Ms {
 
@@ -99,8 +101,7 @@ void quantizeAllTracks(std::multimap<int, MTrack> &tracks,
                         // pass current track index through MidiImportOperations
                         // for further usage
             opers.setCurrentTrack(mtrack.indexOfOperation);
-            if (mtrack.mtrack->drumTrack())
-                  opers.adaptForPercussion(mtrack.indexOfOperation);
+            opers.adaptForPercussion(mtrack.indexOfOperation, mtrack.mtrack->drumTrack());
             mtrack.tuplets = MidiTuplet::findAllTuplets(mtrack.chords, sigmap, lastTick);
             Quantize::quantizeChords(mtrack.chords, mtrack.tuplets, sigmap);
             }
@@ -117,19 +118,18 @@ void MTrack::processMeta(int tick, const MidiEvent& mm)
             return;
             }
       const uchar* data = (uchar*)mm.edata();
-      const int staffIdx      = staff->idx();
       Score* cs         = staff->score();
 
       switch (mm.metaType()) {
             case META_TEXT:
-            case META_LYRIC: {
-                  const QString s((char*)data);
-                  cs->addLyrics(tick, staffIdx, s);
-                  }
-                  break;
+            case META_LYRIC:
+                  break;      // lyric and text are added in importmidi_lyrics.cpp
             case META_TRACK_NAME:
+                  {
+                  std::string text = MidiCharset::fromUchar(data);
                   if (name.isEmpty())
-                        name = (const char*)data;
+                        name = MidiCharset::convertToCharset(text);
+                  }
                   break;
             case META_TEMPO:
                   {
@@ -589,10 +589,31 @@ Measure* barFromIndex(const Score *score, int barIndex)
       return score->tick2measure(tick);
       }
 
-bool isPianoPart(const MTrack &t1, const MTrack &t2)
+bool isGrandStaff(const MTrack &t1, const MTrack &t2)
       {
-      return (t1.mtrack->outChannel() == t2.mtrack->outChannel()
-                  && (t1.program >= 0 && t1.program <= 7));
+      const static std::set<int> grandStaffPrograms = {
+                  // Piano
+              0, 1, 2, 3, 4, 5, 6, 7
+                  // Chromatic Percussion
+            , 8, 10, 11, 12, 13, 15
+                  // Organ
+            , 16, 17, 18, 19, 20, 21, 23
+                  // Strings
+            , 46
+                  // Ensemble
+            , 50, 51, 54
+                  // Brass
+            , 62, 63
+                  // Synth Lead
+            , 80, 81, 82, 83, 84, 85, 86, 87
+                  // Synth Pad
+            , 88, 89, 90, 91, 92, 93, 94, 95
+                  // Synth Effects
+            , 96, 97, 98, 99, 100, 101, 102, 103
+            };
+
+      return t1.mtrack->outChannel() == t2.mtrack->outChannel()
+                  && grandStaffPrograms.find(t1.program) != grandStaffPrograms.end();
       }
 
 bool isSameChannel(const MTrack &t1, const MTrack &t2)
@@ -629,7 +650,7 @@ void createInstruments(Score *score, QList<MTrack> &tracks)
                                                                 track.chords.end());
                   s->setClef(0, MidiClef::clefTypeFromAveragePitch(avgPitch));
                   if (idx < (tracks.size() - 1) && idx >= 0
-                              && isPianoPart(tracks[idx], tracks[idx + 1])) {
+                              && isGrandStaff(tracks[idx], tracks[idx + 1])) {
                                     // assume that the current track and the next track
                                     // form a piano part
                         s->setBracket(0, BRACKET_BRACE);
@@ -735,8 +756,7 @@ void createTimeSignatures(Score *score)
 
             const bool pickupMeasure = preferences.midiImportOperations.currentTrackOperations().pickupMeasure;
             if (pickupMeasure && is == score->sigmap()->begin()) {
-                  auto next = is;
-                  ++next;
+                  auto next = std::next(is);
                   if (next != score->sigmap()->end()) {
                         Measure* mm = score->tick2measure(next->first);
                         if (m && mm && m == barFromIndex(score, 0) && mm == barFromIndex(score, 1)
@@ -776,8 +796,18 @@ void createNotes(const ReducedFraction &lastTick, QList<MTrack> &tracks, MidiTyp
             processMeta(mt, false);
             if (midiType == MT_UNKNOWN)
                   midiType = MT_GM;
-            if (i % 2 && isSameChannel(tracks[i - 1], tracks[i]))
+            if (i % 2 && isSameChannel(tracks[i - 1], mt)) {
                   mt.program = tracks[i - 1].program;
+                  }
+                        // if tracks in Grand staff have different names - clear them,
+                        // instrument name will be used instead
+            if (i % 2 == 0 && i < tracks.size() - 1
+                        && isGrandStaff(mt, tracks[i + 1])) {
+                  if (mt.name != tracks[i + 1].name) {
+                        mt.name = "";
+                        tracks[i + 1].name = "";
+                        }
+                  }
             setTrackInfo(midiType, mt);
                         // pass current track index to the convertTrack function
                         //   through MidiImportOperations
@@ -792,13 +822,8 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
 {
       QList<TrackMeta> tracksMeta;
       for (int i = 0; i < tracks.size(); ++i) {
-            if (i % 2 && isSameChannel(tracks[i - 1], tracks[i])){
-                  TrackMeta lastMeta = tracksMeta.back();
-                  tracksMeta.push_back(lastMeta);
-                  continue;
-                  }
             const MTrack &mt = tracks[i];
-            QString trackName;
+            std::string trackName;
             for (const auto &ie: mt.mtrack->events()) {
                   const MidiEvent &e = ie.second;
                   if ((e.type() == ME_META) && (e.metaType() == META_TRACK_NAME)) {
@@ -806,11 +831,18 @@ QList<TrackMeta> getTracksMeta(const QList<MTrack> &tracks,
                         break;
                         }
                   }
-            MidiType midiType = mf->midiType();
-            if (midiType == MT_UNKNOWN)
-                  midiType = MT_GM;
-            const QString instrName = instrumentName(midiType, mt.program,
-                                                     mt.mtrack->drumTrack());
+            QString instrName;
+            if (i % 2 && isSameChannel(tracks[i - 1], tracks[i])){
+                  TrackMeta lastMeta = tracksMeta.back();
+                  instrName = lastMeta.instrumentName;
+                  }
+            else {
+                  MidiType midiType = mf->midiType();
+                  if (midiType == MT_UNKNOWN)
+                        midiType = MT_GM;
+                  instrName = instrumentName(midiType, mt.program,
+                                             mt.mtrack->drumTrack());
+                  }
             tracksMeta.push_back({trackName,
                                   instrName,
                                   mt.mtrack->drumTrack(),
@@ -826,14 +858,17 @@ void convertMidi(Score *score, const MidiFile *mf)
       auto *sigmap = score->sigmap();
 
       auto tracks = createMTrackList(lastTick, sigmap, mf);
-      MChord::collectChords(tracks);
       cleanUpMidiEvents(tracks);
+      MChord::collectChords(tracks);
+      MChord::removeOverlappingNotes(tracks);
       quantizeAllTracks(tracks, sigmap, lastTick);
       MChord::removeOverlappingNotes(tracks);
+      MChord::mergeChordsWithEqualOnTimeAndVoice(tracks);
       LRHand::splitIntoLeftRightHands(tracks);
-      MChord::splitUnequalChords(tracks);
       MidiDrum::splitDrumVoices(tracks);
       MidiDrum::splitDrumTracks(tracks);
+      MidiDrum::removeRests(tracks, sigmap);
+      MChord::splitUnequalChords(tracks);
                   // no more track insertion/reordering/deletion from now
       QList<MTrack> trackList = prepareTrackList(tracks);
       createInstruments(score, trackList);
@@ -842,7 +877,7 @@ void convertMidi(Score *score, const MidiFile *mf)
       createNotes(lastTick, trackList, mf->midiType());
       createTimeSignatures(score);
       score->connectTies();
-      MidiLyrics::setLyrics(mf, trackList);
+      MidiLyrics::setLyricsToScore(mf, trackList);
       }
 
 void loadMidiData(MidiFile &mf)
@@ -883,7 +918,7 @@ QList<TrackMeta> extractMidiTracksMeta(const QString &fileName)
       const MidiFile *mf = midiData.midiFile(fileName);
       const auto tracks = createMTrackList(lastTick, mockScore.sigmap(), mf);
       QList<MTrack> trackList = prepareTrackList(tracks);
-      MidiLyrics::setInitialIndexes(trackList);
+      MidiLyrics::assignLyricsToTracks(trackList);
 
       return getTracksMeta(trackList, mf);
       }

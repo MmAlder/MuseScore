@@ -390,8 +390,25 @@ void System::layout2()
       n = _brackets.size();
       for (int i = 0; i < n; ++i) {
             Bracket* b = _brackets.at(i);
-            qreal sy = _staves[b->firstStaff()]->bbox().top();
-            qreal ey = _staves[b->lastStaff()]->bbox().bottom();
+            int staffIdx1 = b->firstStaff();
+            int staffIdx2 = b->lastStaff();
+            qreal sy = 0;                       // assume bracket not visible
+            qreal ey = 0;
+            // if start staff not visible, try next staff
+            while (staffIdx1 <= staffIdx2 && !_staves[staffIdx1]->show())
+                  ++staffIdx1;
+            // if end staff not visible, try prev staff
+            while (staffIdx1 <= staffIdx2 && !_staves[staffIdx2]->show())
+                  --staffIdx2;
+            // the bracket will be shown IF:
+            // it spans at least 2 visible staves (staffIdx1 < staffIdx2) OR
+            // it spans just one visible staff (staffIdx1 == staffIdx2) but it is required to do so
+            // (the second case happens at least when the bracket is initially dropped)
+            bool notHidden = (staffIdx1 < staffIdx2) || (b->span() == 1 && staffIdx1 == staffIdx2);
+            if (notHidden) {                    // set vert. pos. and height to visible spanned staves
+                  sy = _staves[staffIdx1]->bbox().top();
+                  ey = _staves[staffIdx2]->bbox().bottom();
+                  }
             b->rypos() = sy;
             b->setHeight(ey - sy);
             b->layout();
@@ -738,7 +755,7 @@ Measure* System::firstMeasure() const
       {
       if (ml.isEmpty())
             return 0;
-      for (MeasureBase* mb = ml.front(); mb; mb = mb->next()) {
+      for (MeasureBase* mb = ml.front(); mb; mb = mb->nextMM()) {
             if (mb->type() != MEASURE)
                   continue;
             return static_cast<Measure*>(mb);
@@ -858,7 +875,7 @@ void System::layoutLyrics(Lyrics* l, Segment* s, int staffIdx)
                   line->setPos(p1);
                   if (sysIdx1 == sysIdx2) {
                         // single segment
-                        qreal headWidth = symbols[0][quartheadSym].width(1.0);
+                        qreal headWidth = score()->noteHeadWidth();
                         qreal len = seg->pagePos().x() - l->pagePos().x() - x1 + headWidth;
                         line->setLen(Spatium(len / _spatium));
                         Lyrics* nl = searchNextLyrics(seg, staffIdx, l->no());

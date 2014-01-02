@@ -33,22 +33,22 @@ XmlReader::XmlReader(QFile* d)
       _track = 0;
       }
 
-XmlReader::XmlReader(const QByteArray& d)
-   : QXmlStreamReader(d)
+XmlReader::XmlReader(const QByteArray& d, const QString& s)
+   : QXmlStreamReader(d), docName(s)
       {
       _tick  = 0;
       _track = 0;
       }
 
-XmlReader::XmlReader(QIODevice* d)
-   : QXmlStreamReader(d)
+XmlReader::XmlReader(QIODevice* d, const QString& s)
+   : QXmlStreamReader(d), docName(s)
       {
       _tick  = 0;
       _track = 0;
       }
 
-XmlReader::XmlReader(const QString& d)
-   : QXmlStreamReader(d)
+XmlReader::XmlReader(const QString& d, const QString& s)
+   : QXmlStreamReader(d), docName(s)
       {
       _tick  = 0;
       _track = 0;
@@ -489,14 +489,14 @@ void Xml::tag(P_ID id, QVariant data, QVariant defaultData)
                         }
                   break;
             case T_LAYOUT_BREAK:
-                  switch(LayoutBreakType(data.toInt())) {
-                        case LAYOUT_BREAK_LINE:
+                  switch(LayoutBreak::LayoutBreakType(data.toInt())) {
+                        case LayoutBreak::LINE:
                               tag(name, QVariant("line"));
                               break;
-                        case LAYOUT_BREAK_PAGE:
+                        case LayoutBreak::PAGE:
                               tag(name, QVariant("page"));
                               break;
-                        case LAYOUT_BREAK_SECTION:
+                        case LayoutBreak::SECTION:
                               tag(name, QVariant("section"));
                               break;
                         }
@@ -701,7 +701,7 @@ void Xml::htmlToString(XmlReader& e, int level, QString* s)
                         return;
                   case QXmlStreamReader::Characters:
                         if (!e.isWhitespace())
-                              *s += e.text().toString();
+                              *s += e.text().toString().toHtmlEscaped();
                         break;
                   case QXmlStreamReader::Comment:
                         break;
@@ -742,6 +742,18 @@ void Xml::writeHtml(QString s)
             *this << sl[i] << "\n";
       }
 
+//---------------------------------------------------------
+//   spannerValues
+//---------------------------------------------------------
+
+const SpannerValues* XmlReader::spannerValues(int id)
+      {
+      for (const SpannerValues& v : _spannerValues) {
+            if (v.spannerId == id)
+                  return &v;
+            }
+      return 0;
+      }
 
 }
 

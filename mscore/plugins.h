@@ -37,6 +37,7 @@ class FileIO : public QObject {
       explicit FileIO(QObject *parent = 0);
 
       Q_INVOKABLE QString read();
+      Q_INVOKABLE bool exists();
       Q_INVOKABLE bool write(const QString& data);
       Q_INVOKABLE bool remove();
       Q_INVOKABLE QString tempPath() {QDir dir; return dir.tempPath();};
@@ -95,10 +96,6 @@ class MsScoreView : public QQuickPaintedItem, public MuseScoreView {
 
       virtual void dataChanged(const QRectF&)   { update(); }
       virtual void updateAll()                  { update(); }
-      virtual void moveCursor()                 {}
-      virtual void updateLoopCursors()          {}
-      virtual void showLoopCursors()            {}
-      virtual void hideLoopCursors()            {}
       virtual void adjustCanvasPosition(const Element*, bool) {}
       virtual void removeScore()                {}
       virtual void changeEditElement(Element*)  {}

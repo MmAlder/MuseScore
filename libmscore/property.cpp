@@ -164,8 +164,9 @@ static const PropertyData propertyList[] = {
       { P_TIMESIG_GLOBAL,      false, 0,               T_FRACTION },
       { P_SPANNER_TICK,        true,  "tick",          T_INT      },
       { P_SPANNER_TICK2,       true,  "tick2",         T_INT      },
+      { P_SPANNER_TRACK2,      true,  "track2",        T_INT      },
 
-      { P_USER_OFF2,           false, "userOff2",      T_POINT    },
+      { P_USER_OFF2,              false, "userOff2",             T_POINT   },
       { P_BEGIN_TEXT_PLACE,       false, "beginTextPlace",       T_INT     },
       { P_CONTINUE_TEXT_PLACE,    false, "beginTextPlace",       T_INT     },
       { P_BEGIN_HOOK,             false, "beginHook",            T_BOOL    },
@@ -265,11 +266,11 @@ QVariant getProperty(P_ID id, XmlReader& e)
             case T_LAYOUT_BREAK: {
                   QString value(e.readElementText());
                   if (value == "line")
-                        return QVariant(int(LAYOUT_BREAK_LINE));
+                        return QVariant(int(LayoutBreak::LINE));
                   if (value == "page")
-                        return QVariant(int(LAYOUT_BREAK_PAGE));
+                        return QVariant(int(LayoutBreak::PAGE));
                   if (value == "section")
-                        return QVariant(int(LAYOUT_BREAK_SECTION));
+                        return QVariant(int(LayoutBreak::SECTION));
                   qDebug("getProperty: invalid T_LAYOUT_BREAK: <%s>", qPrintable(value));
                   }
                   break;

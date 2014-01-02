@@ -41,7 +41,7 @@ include (GetCompilerVersion)
 include (CreatePrecompiledHeader)
 
 # for debugging the make system uncomment next line:
-# set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(MSCORE_UNSTABLE  TRUE)          # mark as unstable
 
@@ -359,8 +359,12 @@ add_custom_command(
     DEPENDS ${PROJECT_SOURCE_DIR}/all.h
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     )
-
-precompiled_header(QT_INCLUDES all)
+if (MINGW)
+  set(BUILD_PCH false)
+else (MINGW)
+  set(BUILD_PCH true)
+endif(MINGW)
+precompiled_header(QT_INCLUDES all ${BUILD_PCH})
 ADD_CUSTOM_TARGET(mops1 DEPENDS ${PROJECT_BINARY_DIR}/all.h)
 ADD_CUSTOM_TARGET(mops2 DEPENDS ${PCH})
 
@@ -374,6 +378,7 @@ subdirs(
 
 add_subdirectory(mtest EXCLUDE_FROM_ALL)
 add_subdirectory(miditools EXCLUDE_FROM_ALL)
+add_subdirectory(fonttools EXCLUDE_FROM_ALL)
 add_subdirectory(manual)
 
 if (USE_PORTMIDI)

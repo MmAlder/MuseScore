@@ -17,6 +17,8 @@
 
 namespace Ms {
 
+enum class NoteHeadType;
+
 //---------------------------------------------------------
 //   TDuration
 //---------------------------------------------------------
@@ -25,7 +27,8 @@ class TDuration {
    public:
       enum DurationType {
             V_LONG, V_BREVE, V_WHOLE, V_HALF, V_QUARTER, V_EIGHT, V_16TH,
-            V_32ND, V_64TH, V_128TH, V_256TH, V_ZERO, V_MEASURE,  V_INVALID
+            V_32ND, V_64TH, V_128TH, V_256TH, V_512TH, V_1024TH,
+            V_ZERO, V_MEASURE,  V_INVALID
             };
    private:
       DurationType _val;
@@ -40,7 +43,7 @@ class TDuration {
       bool isValid() const                  { return _val != V_INVALID; }
       bool isZero() const                   { return _val == V_ZERO; }
       void setVal(int tick);
-      void setType(DurationType t)          { _val = t; }
+      void setType(DurationType t);
       void setType(const QString&);
 
       int ticks() const;
@@ -57,7 +60,7 @@ class TDuration {
       TDuration operator+(const TDuration& t) const { return TDuration(*this) += t; }
 
       QString name() const;
-      int headType() const;               // note head type
+      NoteHeadType headType() const;
       int hooks() const;
       bool hasStem() const;
       TDuration shift(int val) const;

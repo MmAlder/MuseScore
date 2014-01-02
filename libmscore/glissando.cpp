@@ -108,11 +108,15 @@ void Glissando::layout()
 
       // on TAB's, adjust lower end point from string line height to base of note height (= ca. half line spacing)
       if (chord->staff()->isTabStaff()) {
-            qreal yOff = chord->staff()->lineDistance() * 0.5 * _spatium;
-            if (anchor1->pitch() > anchor2->pitch())  // descending glissando:
-                  y2 += yOff;                               // move ending point to base of note
-            else                                      // ascending glissando:
+            qreal yOff = chord->staff()->lineDistance() * 0.3 * _spatium;
+            if (anchor1->pitch() > anchor2->pitch()) {  // descending glissando:
+                  y2 += yOff;
+                  y1 -= yOff;
+                  }                                     // move ending point to base of note
+            else {                                      // ascending glissando:
                   y1 += yOff;                               // move starting point to base of note
+                  y2 -= yOff;
+                  }
             }
 
       // shorten line to avoid end note ledger line
@@ -201,12 +205,11 @@ void Glissando::draw(QPainter* painter) const
             painter->drawLine(QLineF(0.0, 0.0, l, 0.0));
             }
       else if (glissandoType() == GlissandoType::WAVY) {
-            qreal mags = magS();
-            QRectF b = symbols[score()->symIdx()][trillelementSym].bbox(mags);
-            qreal w  = symbols[score()->symIdx()][trillelementSym].width(mags);
+            QRectF b = symBbox(SymId::wiggleTrill);
+            qreal w  = symWidth(SymId::wiggleTrill);
             int n    = (int)(l / w);      // always round down (truncate) to avoid overlap
             qreal x  = (l - n*w) * 0.5;   // centre line in available space
-            symbols[score()->symIdx()][trillelementSym].draw(painter, mags, QPointF(x, b.height()*.5), n);
+            drawSymbol(SymId::wiggleTrill, painter, QPointF(x, b.height()*.5), n);
             }
       if (_showText) {
             const TextStyle& st = score()->textStyle(TEXT_STYLE_GLISSANDO);

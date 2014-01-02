@@ -83,13 +83,13 @@ enum ArticulationType {
       Articulation_Verylongfermata,
       Articulation_Thumb,
       Articulation_Sforzatoaccent,
-      Articulation_Espressivo,
+//      Articulation_Espressivo,
       Articulation_Staccato,
       Articulation_Staccatissimo,
       Articulation_Tenuto,
       Articulation_Portato,
       Articulation_Marcato,
-      Articulation_Ouvert,
+      Articulation_Ouvert,              //TODO-smufl
       Articulation_Plusstop,
       Articulation_Upbow,
       Articulation_Downbow,
@@ -109,9 +109,9 @@ enum ArticulationType {
       Articulation_LinePrall,
       Articulation_Schleifer,
       Articulation_Snappizzicato,
-      Articulation_Tapping,
-      Articulation_Slapping,
-      Articulation_Popping,
+//      Articulation_Tapping,
+//      Articulation_Slapping,
+//      Articulation_Popping,
       ARTICULATIONS
       };
 
@@ -269,7 +269,7 @@ enum {
 
       TEXT_STYLE_INSTRUMENT_EXCERPT,
       TEXT_STYLE_DYNAMICS,
-      TEXT_STYLE_TECHNIK,
+      TEXT_STYLE_TECHNIQUE,
       TEXT_STYLE_TEMPO,
       TEXT_STYLE_METRONOME,
       TEXT_STYLE_MEASURE_NUMBER,
@@ -344,13 +344,14 @@ class MScore : public QObject {
       static MStyle* defaultStyle();
       static MStyle* baseStyle();
       static void setDefaultStyle(MStyle*);
-      static const QString& globalShare() { return _globalShare; }
-      static qreal hRaster()              { return _hRaster;     }
-      static qreal vRaster()              { return _vRaster;     }
-      static void setHRaster(int val)     { _hRaster = val;      }
-      static void setVRaster(int val)     { _vRaster = val;      }
-      static void setNudgeStep10(qreal val)     { nudgeStep10 = val;      }
-      static void setNudgeStep50(qreal val)     { nudgeStep50 = val;      }
+      static const QString& globalShare()   { return _globalShare; }
+      static qreal hRaster()                { return _hRaster;     }
+      static qreal vRaster()                { return _vRaster;     }
+      static void setHRaster(int val)       { _hRaster = val;      }
+      static void setVRaster(int val)       { _vRaster = val;      }
+      static void setNudgeStep(qreal val)   { nudgeStep = val;     }
+      static void setNudgeStep10(qreal val) { nudgeStep10 = val;   }
+      static void setNudgeStep50(qreal val) { nudgeStep50 = val;   }
 
       static QColor selectColor[4];
       static QColor defaultColor;
@@ -382,8 +383,6 @@ class MScore : public QObject {
       static bool debugMode;
       static bool testMode;
       };
-
-static const int HEAD_TYPES = 4;
 
 //---------------------------------------------------------
 //   center

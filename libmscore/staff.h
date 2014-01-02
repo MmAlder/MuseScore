@@ -37,7 +37,7 @@ class KeyList;
 class StaffType;
 class StaffTypeTablature;
 class Staff;
-class Tablature;
+class StringData;
 class ClefList;
 struct ClefTypeList;
 class Segment;
@@ -102,6 +102,7 @@ class Staff : public QObject {
       bool _small;
       bool _invisible;
       bool _updateKeymap;
+      QColor _color;
 
       qreal _userDist;        ///< user edited extra distance
 
@@ -202,13 +203,19 @@ class Staff : public QObject {
       LinkedStaves* linkedStaves() const    { return _linkedStaves; }
       void setLinkedStaves(LinkedStaves* l) { _linkedStaves = l;    }
       void linkTo(Staff* staff);
+      bool isLinked(Staff* staff);
       bool primaryStaff() const;
       qreal userDist() const        { return _userDist;  }
       void setUserDist(qreal val)   { _userDist = val;  }
       void spatiumChanged(qreal /*oldValue*/, qreal /*newValue*/);
       bool genKeySig();
       bool showLedgerLines();
-      const ClefList& clefList() const { return clefs; }
+
+      ClefList* clefList() { return &clefs; }
+
+      QColor color() const                { return _color; }
+      void setColor(const QColor& val)    { _color = val;    }
+      void undoSetColor(const QColor& val);
       };
 
 }     // namespace Ms

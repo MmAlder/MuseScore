@@ -29,7 +29,7 @@ class Measure;
 //---------------------------------------------------------
 //   @@ Cursor
 //   @P track    int          current track
-//   @P staffIdx int          current staff (track * 4)
+//   @P staffIdx int          current staff (track / 4)
 //   @P voice    int          current voice (track % 4)
 //   @P element  Element*     current element at track, read only
 //   @P segment  Segment*     current segment, read only
@@ -51,7 +51,7 @@ class Cursor : public QObject {
 
       Q_PROPERTY(int tick         READ tick)
       Q_PROPERTY(double time      READ time)
-      Q_PROPERTY(Ms::Score* score     READ score    WRITE setScore)
+      Q_PROPERTY(Ms::Score* score READ score    WRITE setScore)
 
       Score* _score;
       int _track;

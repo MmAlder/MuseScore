@@ -160,9 +160,8 @@ void ScoreView::dragEnterEvent(QDragEnterEvent* event)
                         QString suffix = fi.suffix().toLower();
                         if (suffix == "svg"
                            || suffix == "jpg"
+                           || suffix == "jpeg"
                            || suffix == "png"
-                           || suffix == "gif"
-                           || suffix == "xpm"
                            ) {
                               event->acceptProposedAction();
                               break;
@@ -240,7 +239,7 @@ void ScoreView::dragMoveEvent(QDragMoveEvent* event)
                   case Element::ARPEGGIO:
                   case Element::BREATH:
                   case Element::GLISSANDO:
-                  case Element::Element::BRACKET:
+                  case Element::BRACKET:
                   case Element::ARTICULATION:
                   case Element::CHORDLINE:
                   case Element::BEND:
@@ -265,6 +264,7 @@ void ScoreView::dragMoveEvent(QDragMoveEvent* event)
                   case Element::ACCIDENTAL_BRACKET:
                   case Element::HARMONY:
                   case Element::BAGPIPE_EMBELLISHMENT:
+                  case Element::AMBITUS:
                         {
                         QList<Element*> el = elementsAt(pos);
                         bool found = false;
@@ -297,9 +297,8 @@ void ScoreView::dragMoveEvent(QDragMoveEvent* event)
                   QString suffix(fi.suffix().toLower());
                   if (suffix != "svg"
                      && suffix != "jpg"
+                     && suffix != "jpeg"
                      && suffix != "png"
-                     && suffix != "gif"
-                     && suffix != "xpm"
                      )
                         return;
                   //
@@ -383,24 +382,34 @@ void ScoreView::dropEvent(QDropEvent* event)
                   case Element::HARMONY:
                         {
                         Element* el = elementAt(pos);
-                        if (el == 0) {
+                        if (el == 0 || el->type() == Element::MEASURE) {
                               int staffIdx;
                               Segment* seg;
                               el = _score->pos2measure(pos, &staffIdx, 0, &seg, 0);
-                              if (el == 0) {
+                              if (el && el->type() == Element::MEASURE) {
+                                    dragElement->setTrack(staffIdx * VOICES);
+                                    dragElement->setParent(seg);
+                                    score()->undoAddElement(dragElement);
+                                    }
+                              else {
                                     qDebug("cannot drop here");
                                     delete dragElement;
+                                    }
+                              }
+                        else {
+                              _score->addRefresh(el->canvasBoundingRect());
+                              _score->addRefresh(dragElement->canvasBoundingRect());
+
+                              if (!el->acceptDrop(this, pos, dragElement)) {
+                                    qDebug("drop %s onto %s not accepted", dragElement->name(), el->name());
                                     break;
                                     }
-                             }
-                        _score->addRefresh(el->canvasBoundingRect());
-                        _score->addRefresh(dragElement->canvasBoundingRect());
-
-                        Element* dropElement = el->drop(dropData);
-                        _score->addRefresh(el->canvasBoundingRect());
-                        if (dropElement) {
-                              _score->select(dropElement, SELECT_SINGLE, 0);
-                              _score->addRefresh(dropElement->canvasBoundingRect());
+                              Element* dropElement = el->drop(dropData);
+                              _score->addRefresh(el->canvasBoundingRect());
+                              if (dropElement) {
+                                    _score->select(dropElement, SELECT_SINGLE, 0);
+                                    _score->addRefresh(dropElement->canvasBoundingRect());
+                                    }
                               }
                         }
                         event->acceptProposedAction();
@@ -437,6 +446,7 @@ void ScoreView::dropEvent(QDropEvent* event)
                   case Element::SLUR:
                   case Element::ACCIDENTAL_BRACKET:
                   case Element::BAGPIPE_EMBELLISHMENT:
+                  case Element::AMBITUS:
                         {
                         Element* el = 0;
                         foreach(const Element* e, elementsAt(pos)) {

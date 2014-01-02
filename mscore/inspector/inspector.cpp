@@ -25,6 +25,7 @@
 #include "inspectorJump.h"
 #include "inspectorGlissando.h"
 #include "inspectorNote.h"
+#include "inspectorAmbitus.h"
 #include "musescore.h"
 #include "scoreview.h"
 
@@ -79,6 +80,7 @@ Inspector::Inspector(QWidget* parent)
       setObjectName("inspector");
       setAllowedAreas(Qt::DockWidgetAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea));
       sa = new QScrollArea;
+      sa->setFrameShape(QFrame::NoFrame);
       sa->setWidgetResizable(true);
       setWidget(sa);
 
@@ -219,6 +221,9 @@ void Inspector::setElements(const QList<Element*>& l)
                               break;
                         case Element::DYNAMIC:
                               ie = new InspectorDynamic(this);
+                              break;
+                        case Element::AMBITUS:
+                              ie = new InspectorAmbitus(this);
                               break;
                         default:
                               ie = new InspectorElement(this);
@@ -391,10 +396,10 @@ InspectorTimeSig::InspectorTimeSig(QWidget* parent)
             { P_LEADING_SPACE,  0, 1, s.leadingSpace,   s.resetLeadingSpace  },
             { P_TRAILING_SPACE, 0, 1, s.trailingSpace,  s.resetTrailingSpace },
             { P_SHOW_COURTESY,  0, 0, t.showCourtesy,   t.resetShowCourtesy  },
-            { P_TIMESIG,        0, 0, t.timesigZ,       t.resetTimesig       },
-            { P_TIMESIG,        1, 0, t.timesigN,       t.resetTimesig       },
-            { P_TIMESIG_GLOBAL, 0, 0, t.globalTimesigZ, t.resetGlobalTimesig },
-            { P_TIMESIG_GLOBAL, 1, 0, t.globalTimesigN, t.resetGlobalTimesig }
+//            { P_TIMESIG,        0, 0, t.timesigZ,       t.resetTimesig       },
+//            { P_TIMESIG,        1, 0, t.timesigN,       t.resetTimesig       },
+//            { P_TIMESIG_GLOBAL, 0, 0, t.globalTimesigZ, t.resetGlobalTimesig },
+//            { P_TIMESIG_GLOBAL, 1, 0, t.globalTimesigN, t.resetGlobalTimesig }
             };
       mapSignals();
       }
@@ -486,6 +491,48 @@ InspectorClef::InspectorClef(QWidget* parent)
             { P_SHOW_COURTESY,  0, 0, c.showCourtesy,  c.resetShowCourtesy  }
             };
       mapSignals();
+      }
+
+//   InspectorClef::setElement
+
+void InspectorClef::setElement()
+      {
+      otherClef = nullptr;                      // no 'other clef' yet
+      InspectorBase::setElement();
+
+      // try to locate the 'other clef' of a courtesy / main pair
+      Clef * clef = static_cast<Clef*>(inspector->element());
+      // if not in a clef-segment-measure hierachy, do nothing
+      if (!clef->parent() || clef->parent()->type() != Element::SEGMENT)
+            return;
+      Segment*    segm = static_cast<Segment*>(clef->parent());
+      int         segmTick = segm->tick();
+      if (!segm->parent() || segm->parent()->type() != Element::MEASURE)
+            return;
+
+      Measure* meas = static_cast<Measure*>(segm->parent());
+      Measure* otherMeas = nullptr;
+      Segment* otherSegm = nullptr;
+      if (segmTick == meas->tick())                         // if clef segm is measure-initial
+            otherMeas = meas->prevMeasure();                // look for a previous measure
+      else if (segmTick == meas->tick()+meas->ticks())      // if clef segm is measure-final
+            otherMeas = meas->nextMeasure();                // look for a next measure
+      // look for a clef segment in the 'other' measure at the same tick of this clef segment
+      if (otherMeas)
+            otherSegm = otherMeas->findSegment(Segment::SegClef, segmTick);
+      // if any 'other' segment found, look for a clef in the same track as this
+      if (otherSegm)
+            otherClef = static_cast<Clef*>(otherSegm->element(clef->track()));
+      }
+
+//   InspectorClef::valueChanged
+
+void InspectorClef::valueChanged(int idx)
+      {
+      // copy into 'other clef' the ShowCouretsy ser of this clef
+      if (idx == 6 && otherClef)
+            otherClef->setShowCourtesy(c.showCourtesy->isChecked());
+      InspectorBase::valueChanged(idx);
       }
 
 //---------------------------------------------------------

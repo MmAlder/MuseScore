@@ -37,16 +37,21 @@ void Hook::setHookType(int i)
       _hookType = i;
       switch(i) {
             case 0:    break;
-            case 1:    setSym(eighthflagSym);        break;
-            case 2:    setSym(sixteenthflagSym);     break;
-            case 3:    setSym(thirtysecondflagSym);  break;
-            case 4:    setSym(sixtyfourthflagSym);   break;
-            case 5:    setSym(flag128Sym);   break;
-            case -1:   setSym(deighthflagSym);       break;
-            case -2:   setSym(dsixteenthflagSym);    break;
-            case -3:   setSym(dthirtysecondflagSym); break;
-            case -4:   setSym(dsixtyfourthflagSym);  break;
-            case -5:   setSym(dflag128Sym);  break;
+            case 1:    setSym(SymId::flag8thUp);     break;
+            case 2:    setSym(SymId::flag16thUp);    break;
+            case 3:    setSym(SymId::flag32ndUp);    break;
+            case 4:    setSym(SymId::flag64thUp);    break;
+            case 5:    setSym(SymId::flag128thUp);   break;
+            case 6:    setSym(SymId::flag256thUp);   break;
+            case 7:    setSym(SymId::flag512thUp);   break;
+
+            case -1:   setSym(SymId::flag8thDown);   break;
+            case -2:   setSym(SymId::flag16thDown);  break;
+            case -3:   setSym(SymId::flag32ndDown);  break;
+            case -4:   setSym(SymId::flag64thDown);  break;
+            case -5:   setSym(SymId::flag128thDown); break;
+            case -6:   setSym(SymId::flag256thDown); break;
+            case -7:   setSym(SymId::flag512thDown); break;
             default:
                   qDebug("no hook for subtype %d\n", i);
                   break;
@@ -60,7 +65,7 @@ void Hook::setHookType(int i)
 void Hook::layout()
       {
       ElementLayout::layout(this);
-      setbbox(symbols[score()->symIdx()][_sym].bbox(magS()));
+      setbbox(symBbox(_sym));
       }
 
 //---------------------------------------------------------
@@ -70,7 +75,7 @@ void Hook::layout()
 void Hook::draw(QPainter* painter) const
       {
       // hide if belonging to the second chord of a cross-measure pair
-      if(chord() && chord()->crossMeasure() == CROSSMEASURE_SECOND)
+      if (chord() && chord()->crossMeasure() == CROSSMEASURE_SECOND)
             return;
       Symbol::draw(painter);
       }

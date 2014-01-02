@@ -35,7 +35,7 @@
 #include "texteditor.h"
 #include "editpitch.h"
 #include "editstringdata.h"
-#include "libmscore/tablature.h"
+#include "libmscore/stringdata.h"
 
 namespace Ms {
 
@@ -55,11 +55,12 @@ EditStaff::EditStaff(Staff* s, QWidget* parent)
       Score* score = part->score();
 
       // hide string data controls if instrument has no strings
-      stringDataFrame->setVisible(instrument.tablature() && instrument.tablature()->strings() > 0);
+      stringDataFrame->setVisible(instrument.stringData() && instrument.stringData()->strings() > 0);
       fillStaffTypeCombo();
       small->setChecked(staff->small());
       invisible->setChecked(staff->invisible());
       spinExtraDistance->setValue(s->userDist() / score->spatium());
+      color->setColor(s->color());
       partName->setText(part->partName());
 
       updateInstrument();
@@ -85,7 +86,7 @@ void EditStaff::fillStaffTypeCombo()
       int curIdx     = 0;
       int n          = score->staffTypes().size();
       // can this instrument accept tabs or drum set?
-      bool canUseTabs = instrument.tablature() && instrument.tablature()->strings() > 0;
+      bool canUseTabs = instrument.stringData() && instrument.stringData()->strings() > 0;
       bool canUsePerc = instrument.useDrumset();
       staffType->clear();
       for (int idx = 0; idx < n; ++idx) {
@@ -131,7 +132,7 @@ void EditStaff::updateInstrument()
       minPitchP->setText(midiCodeToStr(_minPitchP));
       maxPitchP->setText(midiCodeToStr(_maxPitchP));
 
-      int numStr = instrument.tablature() ? instrument.tablature()->strings() : 0;
+      int numStr = instrument.stringData() ? instrument.stringData()->strings() : 0;
       numOfStrings->setText(QString::number(numStr));
       }
 
@@ -224,6 +225,7 @@ void EditStaff::apply()
       bool s            = small->isChecked();
       bool inv          = invisible->isChecked();
       qreal userDist    = spinExtraDistance->value();
+      QColor col        = color->color();
       int staffIdx      = staffType->itemData(staffType->currentIndex()).toInt();
       StaffType* st     = score->staffType(staffIdx);
 
@@ -237,15 +239,15 @@ void EditStaff::apply()
       bool updateNeeded = (ng == TAB_STAFF_GROUP && og != TAB_STAFF_GROUP) ||
                           (ng != TAB_STAFF_GROUP && og == TAB_STAFF_GROUP) ||
                           (ng == TAB_STAFF_GROUP && og == TAB_STAFF_GROUP
-                             && instrument.tablature() != part->instr()->tablature());
+                             && instrument.stringData() != part->instr()->stringData());
 
       if (!(instrument == *part->instr()) || part->partName() != partName->text()) {
             score->undo(new ChangePart(part, instrument, partName->text()));
             emit instrumentChanged();
             }
 
-      if (s != staff->small() || inv != staff->invisible() || userDist != staff->userDist() || st  != staff->staffType())
-            score->undo(new ChangeStaff(staff, s, inv, userDist * score->spatium(), st));
+      if (s != staff->small() || inv != staff->invisible() || userDist != staff->userDist() || st  != staff->staffType() || col != staff->color())
+            score->undo(new ChangeStaff(staff, s, inv, userDist * score->spatium(), col, st));
 
       if (updateNeeded)
             score->cmdUpdateNotes();
@@ -274,6 +276,7 @@ void EditStaff::showInstrumentDialog()
       if (si.exec()) {
             instrument = Instrument::fromTemplate(si.instrTemplate());
             updateInstrument();
+            fillStaffTypeCombo();
             }
       }
 
@@ -351,17 +354,17 @@ void EditStaff::maxPitchPClicked()
 
 void EditStaff::editStringDataClicked()
       {
-      int         frets = instrument.tablature()->frets();
-      QList<int>  stringList = instrument.tablature()->stringList();
+      int         frets = instrument.stringData()->frets();
+      QList<int>  stringList = instrument.stringData()->stringList();
 
       EditStringData* esd = new EditStringData(this, &stringList, &frets);
       if (esd->exec()) {
-            Tablature * tab = new Tablature(frets, stringList);
+            StringData* stringData = new StringData(frets, stringList);
             // detect number of strings going from 0 to !0 or vice versa
             bool redoStaffTypeCombo =
-                  (stringList.size() != 0) != (instrument.tablature()->strings() != 0);
-            instrument.setTablature(tab);
-            int numStr = tab ? tab->strings() : 0;
+                  (stringList.size() != 0) != (instrument.stringData()->strings() != 0);
+            instrument.setStringData(stringData);
+            int numStr = stringData ? stringData->strings() : 0;
             numOfStrings->setText(QString::number(numStr));
             if (redoStaffTypeCombo)
                   fillStaffTypeCombo();

@@ -24,6 +24,7 @@
 #include "libmscore/fingering.h"
 #include "libmscore/image.h"
 #include "libmscore/element.h"
+#include "libmscore/sym.h"
 #include "mtest/testutils.h"
 
 #define DIR QString("libmscore/link/")
@@ -188,7 +189,7 @@ void TestParts::insertMeasure()
       score->insertMeasure(Element::MEASURE, m);
       score->endCmd();
 
-      //QVERIFY(saveCompareScore(score, "part2-5.mscx", DIR + "part2-5o.mscx"));
+      // QVERIFY(saveCompareScore(score, "part2-5.mscx", DIR + "part2-5o.mscx"));
 
       score->undo()->undo();
       score->endUndoRedo();
@@ -523,7 +524,8 @@ Score* TestParts::doAddSymbol()
       Note* note   = chord->upNote();
       DropData dd;
       dd.view = 0;
-      Symbol* b = new Symbol(score, accDiscantSym);
+      Symbol* b  = new Symbol(score);
+      b->setSym(SymId::gClef);
       dd.element = b;
 
       score->startCmd();

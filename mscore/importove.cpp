@@ -465,70 +465,70 @@ ClefType OveClefToClef(OVE::ClefType type){
 	return clef;
 }
 
-Note::NoteHeadGroup getHeadGroup(OVE::NoteHeadType type) {
-    Note::NoteHeadGroup headGroup = Note::HEAD_NORMAL;
+NoteHeadGroup getHeadGroup(OVE::NoteHeadType type) {
+    NoteHeadGroup headGroup = NoteHeadGroup::HEAD_NORMAL;
 	switch (type) {
 	case OVE::NoteHead_Standard: {
-		headGroup = Note::HEAD_NORMAL;
+		headGroup = NoteHeadGroup::HEAD_NORMAL;
 		break;
 	}
 	case OVE::NoteHead_Invisible: {
 		break;
 	}
 	case OVE::NoteHead_Rhythmic_Slash: {
-		headGroup = Note::HEAD_SLASH;
+		headGroup = NoteHeadGroup::HEAD_SLASH;
 		break;
 	}
 	case OVE::NoteHead_Percussion: {
-		headGroup = Note::HEAD_XCIRCLE;
+		headGroup = NoteHeadGroup::HEAD_XCIRCLE;
 		break;
 	}
 	case OVE::NoteHead_Closed_Rhythm: {
-		headGroup = Note::HEAD_CROSS;
+		headGroup = NoteHeadGroup::HEAD_CROSS;
 		break;
 	}
 	case OVE::NoteHead_Open_Rhythm: {
-		headGroup = Note::HEAD_CROSS;
+		headGroup = NoteHeadGroup::HEAD_CROSS;
 		break;
 	}
 	case OVE::NoteHead_Closed_Slash: {
-		headGroup = Note::HEAD_SLASH;
+		headGroup = NoteHeadGroup::HEAD_SLASH;
 		break;
 	}
 	case OVE::NoteHead_Open_Slash: {
-		headGroup = Note::HEAD_SLASH;
+		headGroup = NoteHeadGroup::HEAD_SLASH;
 		break;
 	}
 	case OVE::NoteHead_Closed_Do: {
-		headGroup = Note::HEAD_DO;
+		headGroup = NoteHeadGroup::HEAD_DO;
 		break;
 	}
 	case OVE::NoteHead_Open_Do: {
-		headGroup = Note::HEAD_DO;
+		headGroup = NoteHeadGroup::HEAD_DO;
 		break;
 	}
 	case OVE::NoteHead_Closed_Re: {
-		headGroup = Note::HEAD_RE;
+		headGroup = NoteHeadGroup::HEAD_RE;
 		break;
 	}
 	case OVE::NoteHead_Open_Re: {
-		headGroup = Note::HEAD_RE;
+		headGroup = NoteHeadGroup::HEAD_RE;
 		break;
 	}
 	case OVE::NoteHead_Closed_Mi: {
-		headGroup = Note::HEAD_MI;
+		headGroup = NoteHeadGroup::HEAD_MI;
 		break;
 	}
 	case OVE::NoteHead_Open_Mi: {
-		headGroup = Note::HEAD_MI;
+		headGroup = NoteHeadGroup::HEAD_MI;
 		break;
 	}
 	case OVE::NoteHead_Closed_Fa: {
-		headGroup = Note::HEAD_FA;
+		headGroup = NoteHeadGroup::HEAD_FA;
 		break;
 	}
 	case OVE::NoteHead_Open_Fa: {
-		headGroup = Note::HEAD_FA;
+		headGroup = NoteHeadGroup::HEAD_FA;
 		break;
 	}
 	case OVE::NoteHead_Closed_Sol: {
@@ -538,19 +538,19 @@ Note::NoteHeadGroup getHeadGroup(OVE::NoteHeadType type) {
 		break;
 	}
 	case OVE::NoteHead_Closed_La: {
-		headGroup = Note::HEAD_LA;
+		headGroup = NoteHeadGroup::HEAD_LA;
 		break;
 	}
 	case OVE::NoteHead_Open_La: {
-		headGroup = Note::HEAD_LA;
+		headGroup = NoteHeadGroup::HEAD_LA;
 		break;
 	}
 	case OVE::NoteHead_Closed_Ti: {
-		headGroup = Note::HEAD_TI;
+		headGroup = NoteHeadGroup::HEAD_TI;
 		break;
 	}
 	case OVE::NoteHead_Open_Ti: {
-		headGroup = Note::HEAD_TI;
+		headGroup = NoteHeadGroup::HEAD_TI;
 		break;
 	}
 	default: {
@@ -715,7 +715,7 @@ void OveToMScore::convertLineBreak(){
 				if ((int)line->getBeginBar() + (int)line->getBarCount()-1 == measure->no()) {
 					LayoutBreak* lb = new LayoutBreak(score_);
 					lb->setTrack(0);
-					lb->setLayoutBreakType(LAYOUT_BREAK_LINE);
+					lb->setLayoutBreakType(LayoutBreak::LINE);
 					measure->add(lb);
 				}
 			}
@@ -1797,7 +1797,7 @@ void OveToMScore::convertArticulation(
 	}
 	case OVE::Articulation_Plus_Sign :{
 		Articulation* a = new Articulation(score_);
-		a->setArticulationType(Articulation_Plusstop);
+     	      a->setArticulationType(Articulation_Plusstop);
 		cr->add(a);
 		break;
 	}
@@ -2159,10 +2159,10 @@ void OveToMScore::convertSlurs(Measure* measure, int part, int staff, int track)
 
 	        Slur* slur = new Slur(score_);
 	        slur->setSlurDirection(slurPtr->getShowOnTop()? MScore::UP : MScore::DOWN);
-              slur->setTick(absStartTick);
-              slur->setTick2(absEndTick);
+		slur->setTick(absStartTick);
+		slur->setTick2(absEndTick);
 	        slur->setTrack(track);
-	        // slur->setTrack2(track+endContainer->getOffsetStaff());
+		slur->setTrack2(track+endContainer->getOffsetStaff());
 
 	        score_->addSpanner(slur);
 		}
@@ -2276,7 +2276,7 @@ void OveToMScore::convertExpressions(Measure* measure, int part, int staff, int 
 		int absTick = mtt_->getTick(measure->no(), expressionPtr->getTick());
 		Text* t = new Text(score_);
 
-		t->setTextStyleType(TEXT_STYLE_TECHNIK);
+		t->setTextStyleType(TEXT_STYLE_TECHNIQUE);
 		t->setText(expressionPtr->getText());
 		t->setTrack(track);
 
@@ -2391,7 +2391,7 @@ Score::FileError importOve(Score* score, const QString& name) {
 
 	oveFile.close();
 
-	oveSong.setTextCodecName(preferences.importCharset);
+	oveSong.setTextCodecName(preferences.importCharsetOve);
 	oveLoader->setOve(&oveSong);
 	oveLoader->setFileStream((unsigned char*) buffer.data(), buffer.size());
 	bool result = oveLoader->load();

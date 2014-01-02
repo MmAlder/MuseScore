@@ -23,7 +23,7 @@
 #include "libmscore/rest.h"
 #include "libmscore/chord.h"
 #include "libmscore/note.h"
-#include "libmscore/tablature.h"
+#include "libmscore/stringdata.h"
 #include "libmscore/clef.h"
 #include "libmscore/lyrics.h"
 #include "libmscore/tempotext.h"
@@ -41,6 +41,7 @@
 #include "libmscore/tremolobar.h"
 #include "libmscore/segment.h"
 #include "libmscore/rehearsalmark.h"
+#include "preferences.h"
 
 namespace Ms {
 
@@ -76,6 +77,7 @@ GuitarPro::GuitarPro(Score* s, int v)
       {
       score   = s;
       version = v;
+      _codec = QTextCodec::codecForName(preferences.importCharsetGP.toLatin1());
       }
 
 GuitarPro::~GuitarPro()
@@ -142,7 +144,10 @@ QString GuitarPro::readPascalString(int n)
       read(s, l);
       s[l] = 0;
       skip(n - l);
-      return QString(s);
+      if(_codec)
+            return _codec->toUnicode(s);
+      else
+            return QString(s);
       }
 
 //---------------------------------------------------------
@@ -155,7 +160,10 @@ QString GuitarPro::readWordPascalString()
       char c[l+1];
       read(c, l);
       c[l] = 0;
-      return QString::fromLocal8Bit(c);
+      if(_codec)
+            return _codec->toUnicode(c);
+      else
+            return QString::fromLocal8Bit(c);
       }
 
 //---------------------------------------------------------
@@ -168,7 +176,10 @@ QString GuitarPro::readBytePascalString()
       char c[l+1];
       read(c, l);
       c[l] = 0;
-      return QString::fromLocal8Bit(c);
+      if(_codec)
+            return  _codec->toUnicode(c);
+      else
+            return QString::fromLocal8Bit(c);
       }
 
 //---------------------------------------------------------
@@ -186,7 +197,10 @@ QString GuitarPro::readDelphiString()
       char c[l + 1];
       read(c, l);
       c[l] = 0;
-      return QString::fromLatin1(c);
+      if(_codec)
+            return  _codec->toUnicode(c);
+      else
+            return QString::fromLatin1(c);
       }
 
 //---------------------------------------------------------
@@ -427,6 +441,7 @@ void GuitarPro::applyBeatEffects(Chord* chord, int beatEffect)
       Articulation* a = new Articulation(chord->score());
       chord->add(a);
       switch (beatEffect) {
+#if 0 // TODO-smufl
             case 1:
                   a->setArticulationType(Articulation_Tapping);
                   break;
@@ -436,8 +451,9 @@ void GuitarPro::applyBeatEffects(Chord* chord, int beatEffect)
             case 3:
                   a->setArticulationType(Articulation_Popping);
                   break;
+#endif
             default:
-                  qDebug("GuitarPro import: unknown beat effect %d\n", beatEffect);
+                  qDebug("GuitarPro import: unknown beat effect %d", beatEffect);
             }
       }
 
@@ -492,10 +508,10 @@ void GuitarPro1::read(QFile* fp)
                   tuning2[strings-k-1] = tuning[k];
 
             int frets = 32;   // TODO
-            Tablature* tab = new Tablature(frets, strings, tuning2);
+            StringData* stringData = new StringData(frets, strings, tuning2);
             Part* part = score->staff(i)->part();
             Instrument* instr = part->instr();
-            instr->setTablature(tab);
+            instr->setStringData(stringData);
             }
 
       measures = readInt();
@@ -598,7 +614,7 @@ void GuitarPro1::read(QFile* fp)
                         cr->setDurationType(d);
                         segment->add(cr);
                         Staff* staff = cr->staff();
-                        int numStrings = staff->part()->instr()->tablature()->strings();
+                        int numStrings = staff->part()->instr()->stringData()->strings();
                         for (int i = 6; i >= 0; --i) {
                               if (strings & (1 << i) && ((6-i) < numStrings)) {
                                     Note* note = new Note(score);
@@ -769,10 +785,10 @@ qDebug("BeginRepeat=============================================\n");
             int tuning2[strings];
             for (int k = 0; k < strings; ++k)
                   tuning2[strings-k-1] = tuning[k];
-            Tablature* tab = new Tablature(frets, strings, tuning2);
+            StringData* stringData = new StringData(frets, strings, tuning2);
             Part* part = score->staff(i)->part();
             Instrument* instr = part->instr();
-            instr->setTablature(tab);
+            instr->setStringData(stringData);
             part->setPartName(name);
             instr->setTranspose(Interval(capo));
             part->setLongName(name);
@@ -894,7 +910,7 @@ qDebug("BeginRepeat=============================================\n");
                         cr->setDurationType(d);
                         segment->add(cr);
                         Staff* staff = cr->staff();
-                        int numStrings = staff->part()->instr()->tablature()->strings();
+                        int numStrings = staff->part()->instr()->stringData()->strings();
                         for (int i = 6; i >= 0; --i) {
                               if (strings & (1 << i) && ((6-i) < numStrings)) {
                                     Note* note = new Note(score);
@@ -1005,10 +1021,10 @@ void GuitarPro1::readNote(int string, Note* note)
       Staff* staff = note->staff();
       if (fretNumber == 255) {
             fretNumber = 0;
-            note->setHeadGroup(Note::HEAD_CROSS);
+            note->setHeadGroup(NoteHeadGroup::HEAD_CROSS);
             note->setGhost(true);
             }
-      int pitch = staff->part()->instr()->tablature()->getPitch(string, fretNumber);
+      int pitch = staff->part()->instr()->stringData()->getPitch(string, fretNumber);
       note->setFret(fretNumber);
       note->setString(string);
       note->setPitch(pitch);
@@ -1249,10 +1265,10 @@ qDebug("BeginRepeat=============================================\n");
             int tuning2[strings];
             for (int k = 0; k < strings; ++k)
                   tuning2[strings-k-1] = tuning[k];
-            Tablature* tab = new Tablature(frets, strings, tuning2);
+            StringData* stringData = new StringData(frets, strings, tuning2);
             Part* part = score->staff(i)->part();
             Instrument* instr = part->instr();
-            instr->setTablature(tab);
+            instr->setStringData(stringData);
             part->setPartName(name);
             part->setLongName(name);
             instr->setTranspose(Interval(capo));
@@ -1393,7 +1409,7 @@ qDebug("BeginRepeat=============================================\n");
                         cr->setDurationType(d);
                         segment->add(cr);
                         Staff* staff = cr->staff();
-                        int numStrings = staff->part()->instr()->tablature()->strings();
+                        int numStrings = staff->part()->instr()->stringData()->strings();
                         for (int i = 6; i >= 0; --i) {
                               if (strings & (1 << i) && ((6-i) < numStrings)) {
                                     Note* note = new Note(score);
@@ -1577,10 +1593,10 @@ void GuitarPro4::readNote(int string, Note* note, GpNote* gpNote)
       Staff* staff = note->staff();
       if (fretNumber == 255) {
             fretNumber = 0;
-            note->setHeadGroup(Note::HEAD_CROSS);
+            note->setHeadGroup(NoteHeadGroup::HEAD_CROSS);
             note->setGhost(true);
             }
-      int pitch = staff->part()->instr()->tablature()->getPitch(string, fretNumber);
+      int pitch = staff->part()->instr()->stringData()->getPitch(string, fretNumber);
       note->setFret(fretNumber);
       note->setString(string);
       note->setPitch(pitch);
@@ -1767,10 +1783,10 @@ void GuitarPro4::read(QFile* fp)
             int tuning2[strings];
             for (int k = 0; k < strings; ++k)
                   tuning2[strings-k-1] = tuning[k];
-            Tablature* tab = new Tablature(frets, strings, tuning2);
+            StringData* stringData = new StringData(frets, strings, tuning2);
             Part* part = score->staff(i)->part();
             Instrument* instr = part->instr();
-            instr->setTablature(tab);
+            instr->setStringData(stringData);
             part->setPartName(name);
             instr->setTranspose(Interval(capo));
             part->setLongName(name);
@@ -1898,7 +1914,7 @@ void GuitarPro4::read(QFile* fp)
 
                         segment->add(cr);
                         Staff* staff = cr->staff();
-                        int numStrings = staff->part()->instr()->tablature()->strings();
+                        int numStrings = staff->part()->instr()->stringData()->strings();
                         bool hasSlur = false;
                         for (int i = 6; i >= 0; --i) {
                               if (strings & (1 << i) && ((6-i) < numStrings)) {
@@ -1916,15 +1932,18 @@ void GuitarPro4::read(QFile* fp)
                               Slur* slur = new Slur(score);
                               slur->setParent(0);
                               slur->setTrack(staffIdx * VOICES);
+                              slur->setTrack2(staffIdx * VOICES);
                               slur->setTick(cr->tick());
                               slur->setTick2(cr->tick());
                               slurs[staffIdx] = slur;
+                              score->addElement(slur);
                               }
                         else if (slurs[staffIdx] && !hasSlur) {
                               // TODO: check slur
                               Slur* s = slurs[staffIdx];
                               slurs[staffIdx] = 0;
                               s->setTick2(cr->tick());
+                              s->setTrack2(cr->track());
                               }
                         else if (slurs[staffIdx] && hasSlur) {
                               }
@@ -2067,10 +2086,10 @@ void GuitarPro5::readNote(int string, Note* note)
       Staff* staff = note->staff();
       if (fretNumber == 255) {
             fretNumber = 0;
-            note->setHeadGroup(Note::HEAD_CROSS);
+            note->setHeadGroup(NoteHeadGroup::HEAD_CROSS);
             note->setGhost(true);
             }
-      int pitch = staff->part()->instr()->tablature()->getPitch(string, fretNumber);
+      int pitch = staff->part()->instr()->stringData()->getPitch(string, fretNumber);
       note->setFret(fretNumber);
       note->setString(string);
       note->setPitch(pitch);
@@ -2302,7 +2321,7 @@ int GuitarPro5::readBeat(int tick, int voice, Measure* measure, int staffIdx, Tu
             segment->add(cr);
 
             Staff* staff = cr->staff();
-            int numStrings = staff->part()->instr()->tablature()->strings();
+            int numStrings = staff->part()->instr()->stringData()->strings();
             for (int i = 6; i >= 0; --i) {
                   if (strings & (1 << i) && ((6-i) < numStrings)) {
                         Note* note = new Note(score);
@@ -2459,9 +2478,9 @@ void GuitarPro5::readTracks()
             int tuning2[strings];
             for (int k = 0; k < strings; ++k)
                   tuning2[strings-k-1] = tuning[k];
-            Tablature* tab = new Tablature(frets, strings, tuning2);
+            StringData* stringData = new StringData(frets, strings, tuning2);
             Instrument* instr = part->instr();
-            instr->setTablature(tab);
+            instr->setStringData(stringData);
             part->setPartName(name);
             part->setLongName(name);
             instr->setTranspose(Interval(capo));
@@ -2669,7 +2688,7 @@ Score::FileError importGTP(Score* score, const QString& name)
       catch(GuitarPro::GuitarProError errNo) {
             if (!noGui) {
                   QMessageBox::warning(0,
-                     QWidget::tr("MuseScore: Import GuitarPro"),
+                     QWidget::tr("MuseScore: Import Guitar Pro"),
                      QString("Load failed: ") + gp->error(errNo),
                      QString::null, QWidget::tr("Quit"), QString::null, 0, 1);
                   }

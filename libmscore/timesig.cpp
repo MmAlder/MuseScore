@@ -57,10 +57,8 @@ qreal TimeSig::mag() const
 
 void TimeSig::setSig(const Fraction& f, TimeSigType st)
       {
-      if (_sig != f) {
-//            customText = false;
-            _sig       = f;
-            }
+      if (_sig != f)
+            _sig = f;
       if (st == TSIG_FOUR_FOUR || st == TSIG_ALLA_BREVE)
             customText = false;
       _timeSigType = st;
@@ -253,9 +251,6 @@ void TimeSig::layout1()
                   setbbox(QRectF());
                   // leave everything else as it is:
                   // draw() will anyway skip any drawing if staff type has no time sigs
-//                sigType = TSIG_NORMAL;
-//                _numeratorString.clear();
-//                _denominatorString.clear();
                   return;
                   }
             // update to real staff values
@@ -268,21 +263,18 @@ void TimeSig::layout1()
       // determine middle staff position:
 
       qreal yoff = _spatium * (numOfLines-1) *.5 * lineDist;
-      qreal mag  = magS();
 
       // C and Ccut are placed at the middle of the staff: use yoff directly
       if (sigType ==  TSIG_FOUR_FOUR) {
             pz = QPointF(0.0, yoff);
-            Sym& sym = symbols[score()->symIdx()][fourfourmeterSym];
-            setbbox(sym.bbox(mag).translated(pz));
-            _numeratorString = sym.toString();
+            setbbox(symBbox(SymId::timeSigCommon).translated(pz));
+            _numeratorString = score()->scoreFont()->toString(SymId::timeSigCommon);
             _denominatorString.clear();
             }
       else if (sigType == TSIG_ALLA_BREVE) {
             pz = QPointF(0.0, yoff);
-            Sym& sym = symbols[score()->symIdx()][allabreveSym];
-            setbbox(sym.bbox(mag).translated(pz));
-            _numeratorString = sym.toString();
+            setbbox(symBbox(SymId::timeSigCutCommon).translated(pz));
+            _numeratorString = score()->scoreFont()->toString(SymId::timeSigCutCommon);
             _denominatorString.clear();
             }
       else {
@@ -290,32 +282,32 @@ void TimeSig::layout1()
                   _numeratorString   = QString("%1").arg(_sig.numerator());   // build numerator string
                   _denominatorString = QString("%1").arg(_sig.denominator()); // build denominator string
                   }
-            QFont font = fontId2font(symIdx2fontId(score()->symIdx()));
-            font.setPixelSize(lrint(20.0 * MScore::DPI/PPI));
+            QString ns = toTimeSigString(_numeratorString);
+            QString ds = toTimeSigString(_denominatorString);
+            QFont font = score()->scoreFont()->font();
             QFontMetricsF fm(font);
-            QRectF numRect = fm.tightBoundingRect(_numeratorString);          // get 'tight' bounding boxes for strings
-            QRectF denRect = fm.tightBoundingRect(_denominatorString);
+            qreal mag = magS();
+            QRectF numRect = fm.tightBoundingRect(ns);          // get 'tight' bounding boxes for strings
+            QRectF denRect = fm.tightBoundingRect(ds);
+            // really Qt does not provide a QRectF::scale() method?!!
+            numRect = QRect(numRect.x()*mag, numRect.y()*mag, fm.width(ns)*mag, numRect.height()*mag);
+            denRect = QRect(denRect.x()*mag, denRect.y()*mag, fm.width(ds)*mag, denRect.height()*mag);
 
             // position numerator and denominator; vertical displacement:
             // number of lines is odd: 0.0 (strings are directly above and below the middle line)
             // number of lines even:   0.05 (strings are moved up/down to leave 1/10sp between them)
-
             qreal displ = (numOfLines & 1) ? 0.0 : (0.05 * _spatium);
 
-            pz = QPointF(0.0, yoff - displ);
-            // denom. horiz. posit.: centred around centre of numerator
-            // vert. position:       base line is lowered by displ and by the whole height of a digit
+            // numerator: one space above centre line, unless denomin. is empty (if so, directly centre in the middle)
+            pz = QPointF(0.0, yoff - ((denRect.width() < 0.01) ? 0.0 : (displ + _spatium)) );
 
-            qreal spatium2 = _spatium * 2.0;
-            pn = QPointF((numRect.width() - denRect.width())*.5, yoff + displ + spatium2);
+            // denominator: horiz: centred around centre of numerator | vert: one space below centre line
+            pn = QPointF((numRect.width() - denRect.width())*.5, yoff + displ + _spatium);
 
             setbbox(numRect.translated(pz));   // translate bounding boxes to actual string positions
             addbbox(denRect.translated(pn));
             }
-      qreal im = (MScore::DPI * SPATIUM20) / _spatium;
 
-      pz *= im;                           // convert positions to raster units
-      pn *= im;
       _needLayout = false;
       // adjustReadPos();
       }
@@ -329,16 +321,11 @@ void TimeSig::draw(QPainter* painter) const
       if (staff() && !staff()->staffType()->genTimesig())
             return;
       painter->setPen(curColor());
-      QFont font = fontId2font(symIdx2fontId(score()->symIdx()));
-      font.setPixelSize(lrint(20.0 * MScore::DPI/PPI));
-      painter->setFont(font);
-      qreal mag  = spatium() / (MScore::DPI * SPATIUM20);
-      qreal imag = 1.0 / mag;
+      QString ns = toTimeSigString(_numeratorString);
+      QString ds = toTimeSigString(_denominatorString);
 
-      painter->scale(mag, mag);
-      painter->drawText(pz, _numeratorString);    // use positions and strings computed in layout()
-      painter->drawText(pn, _denominatorString);
-      painter->scale(imag, imag);
+      drawSymbols(ns, painter, pz);
+      drawSymbols(ds, painter, pn);
       }
 
 //---------------------------------------------------------

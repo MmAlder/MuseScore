@@ -57,17 +57,18 @@ class Segment : public Element {
    public:
       enum SegmentType {
             SegInvalid            = 0x0,
-            SegClef               = 0x1,
-            SegKeySig             = 0x2,
-            SegTimeSig            = 0x4,
-            SegStartRepeatBarLine = 0x8,
-            SegBarLine            = 0x10,
-            SegChordRest          = 0x20,
-            SegBreath             = 0x40,
-            SegEndBarLine         = 0x80,
-            SegTimeSigAnnounce    = 0x100,
-            SegKeySigAnnounce     = 0x200,
-            SegAll                = 0xfff,
+            SegClef               = 0x1,        // type from SegClef to SegTimeSig
+            SegKeySig             = 0x2,        // need to be in the order in which they
+            SegAmbitus            = 0x4,        // appear in a measure
+            SegTimeSig            = 0x8,
+            SegStartRepeatBarLine = 0x10,
+            SegBarLine            = 0x20,
+            SegChordRest          = 0x40,
+            SegBreath             = 0x80,
+            SegEndBarLine         = 0x100,
+            SegTimeSigAnnounce    = 0x200,
+            SegKeySigAnnounce     = 0x400,
+            SegAll                = 0xffff
             };
       typedef QFlags<SegmentType> SegmentTypes;
 
@@ -111,16 +112,25 @@ class Segment : public Element {
       void setPrev(Segment* e)          { _prev = e;      }
 
       Q_INVOKABLE Ms::Segment* next1() const;
+      Ms::Segment* next1MM() const;
       Segment* next1(SegmentTypes) const;
+      Segment* next1MM(SegmentTypes) const;
       Q_INVOKABLE Ms::Segment* prev1() const;
+      Ms::Segment* prev1MM() const;
       Segment* prev1(SegmentTypes) const;
+      Segment* prev1MM(SegmentTypes) const;
 
       Segment* nextCR(int track = -1) const;
 
       ChordRest* nextChordRest(int track, bool backwards = false) const;
 
-      Q_INVOKABLE Ms::Element* element(int track) const    { return _elist.value(track);  }
+      Q_INVOKABLE Ms::Element* element(int track) const { return _elist.value(track);  }
+      ChordRest* cr(int track) const                    {
+            Q_ASSERT(_segmentType == SegChordRest);
+            return (ChordRest*)(_elist.value(track));
+            };
       const QList<Element*>& elist() const { return _elist; }
+      QList<Element*>& elist()             { return _elist; }
 
       void removeElement(int track);
       void setElement(int track, Element* el);
@@ -157,6 +167,7 @@ class Segment : public Element {
       bool splitsTuplet() const;
 
       const std::vector<Element*>& annotations() const { return _annotations;        }
+      void clearAnnotations();
       void removeAnnotation(Element* e);
       bool findAnnotationOrElement(ElementType type, int minTrack, int maxTrack);
 

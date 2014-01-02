@@ -99,7 +99,7 @@
 #include "libmscore/fret.h"
 #include "libmscore/qzipreader_p.h"
 #include "libmscore/stafftype.h"
-#include "libmscore/tablature.h"
+#include "libmscore/stringdata.h"
 #include "libmscore/drumset.h"
 #include "libmscore/beam.h"
 #include "libmscore/jump.h"
@@ -1243,8 +1243,7 @@ void MusicXml::scorePartwise(QDomElement ee)
                   domError(e);
             }
 
-      // add bracket where required
-      // add bracket to multi-staff parts
+      // add brackets where required
 
       /*
       qDebug("partGroupList");
@@ -1255,8 +1254,9 @@ void MusicXml::scorePartwise(QDomElement ee)
             }
        */
 
-      // set of parts containing one or more explicit brackets
-      // i.e. the parts starting a part-group
+      // set of (typically multi-staff) parts containing one or more explicit brackets
+      // spanning only that part: these won't get an implicit brace later
+      // e.g. a two-staff piano part with an explicit brace
       QSet<Part const* const> partSet;
 
       // handle the explicit brackets
@@ -1264,14 +1264,18 @@ void MusicXml::scorePartwise(QDomElement ee)
       for (int i = 0; i < (int) partGroupList.size(); i++) {
             MusicXmlPartGroup* pg = partGroupList[i];
             // add part to set
-            partSet << il.at(pg->start);
+            if (pg->span == 1)
+                  partSet << il.at(pg->start);
             // determine span in staves
             int stavesSpan = 0;
             for (int j = 0; j < pg->span; j++)
                   stavesSpan += il.at(pg->start + j)->nstaves();
             // add bracket and set the span
             // TODO: use group-symbol default-x to determine horizontal order of brackets
-            il.at(pg->start)->staff(0)->addBracket(BracketItem(pg->type, stavesSpan));
+            if (pg->type == NO_BRACKET)
+                  il.at(pg->start)->staff(0)->setBracket(0, NO_BRACKET);
+            else
+                  il.at(pg->start)->staff(0)->addBracket(BracketItem(pg->type, stavesSpan));
             if (pg->barlineSpan)
                   il.at(pg->start)->staff(0)->setBarLineSpan(pg->span);
             }
@@ -1329,7 +1333,9 @@ static void partGroupStart(MusicXmlPartGroup* (&pgs)[MAX_PART_GROUPS], int n, in
 
       BracketType bracketType = NO_BRACKET;
       if (s == "")
-            ;  //ignore
+            ;  // ignore (handle as NO_BRACKET)
+      else if (s == "none")
+            ;  // already set to NO_BRACKET
       else if (s == "brace")
             bracketType = BRACKET_BRACE;
       else if (s == "bracket")
@@ -1464,13 +1470,23 @@ void MusicXml::xmlScorePart(QDomElement e, QString id, int& parts)
                   part->setLongName(e.text());
                   // part->setTrackName(e.text());
                   }
+            else if (e.tagName() == "part-name-display") {
+                  // TODO
+                  domNotImplemented(e);
+            }
             else if (e.tagName() == "part-abbreviation") {
                   part->setShortName(e.text());
                   }
+            else if (e.tagName() == "part-abbreviation-display") {
+                  // TODO
+                  domNotImplemented(e);
+            }
             else if (e.tagName() == "score-instrument") {
                   QString instrId = e.attribute("id");
                   for (QDomElement ee = e.firstChildElement(); !ee.isNull(); ee = ee.nextSiblingElement()) {
-                        if (ee.tagName() == "instrument-name") {
+                        if (ee.tagName() == "ensemble")
+                              domNotImplemented(e);
+                        else if (ee.tagName() == "instrument-name") {
                               qDebug("MusicXml::xmlScorePart: instrument id %s name %s",
                                      qPrintable(instrId), qPrintable(ee.text()));
                               drumsets[id].insert(instrId, MusicXMLDrumInstrument(ee.text()));
@@ -1743,7 +1759,7 @@ void MusicXml::xmlPart(QDomElement e, QString id)
             }
 
       // qDebug("wedge list:");
-      QMap<Spanner*, QPair<int, int> >::const_iterator i = spanners.constBegin();
+      auto i = spanners.constBegin();
       while (i != spanners.constEnd()) {
             Spanner* sp = i.key();
             int tick1 = i.value().first;
@@ -2020,7 +2036,7 @@ Measure* MusicXml::xmlMeasure(Part* part, QDomElement e, int number, int measure
       if (implicit == "yes")
             measure->setIrregular(true);
 
-      int cv = 0; // current voice for chords, default is 0
+      QString cv = "1"; // current voice for chords, default is 1
       QList<GraceNoteInfo> graceNotesInfos;
       for (e = e.firstChildElement(); !e.isNull(); e = e.nextSiblingElement()) {
             if (e.tagName() == "attributes")
@@ -2055,7 +2071,7 @@ Measure* MusicXml::xmlMeasure(Part* part, QDomElement e, int number, int measure
                               LayoutBreak* lb = new LayoutBreak(score);
                               lb->setTrack(staff * VOICES);
                               lb->setLayoutBreakType(
-                                    newSystem == "yes" ? LAYOUT_BREAK_LINE : LAYOUT_BREAK_PAGE
+                                    newSystem == "yes" ? LayoutBreak::LINE : LayoutBreak::PAGE
                                     );
                               pm->add(lb);
                               }
@@ -2286,9 +2302,11 @@ Measure* MusicXml::xmlMeasure(Part* part, QDomElement e, int number, int measure
 
 static void setSLinePlacement(SLine* sli, float s, const QString pl, bool hasYoff, qreal yoff)
       {
+      /*
       qDebug("setSLinePlacement s=%g pl='%s' hasy=%d yoff=%g",
              s, qPrintable(pl), hasYoff, yoff
              );
+       */
       float offs = 0.0;
       if (hasYoff) offs = yoff;
       else {
@@ -2301,7 +2319,7 @@ static void setSLinePlacement(SLine* sli, float s, const QString pl, bool hasYof
                   qDebug("setSLinePlacement invalid placement '%s'", qPrintable(pl));
             }
       sli->setYoff(offs);
-      qDebug(" -> offs*s=%g", offs * s);
+      //qDebug(" -> offs*s=%g", offs * s);
       }
 
 //---------------------------------------------------------
@@ -2524,6 +2542,8 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                               coda = true;
                         else if (dirType == "segno")
                               segno = true;
+                        else if (dirType == "other-direction")
+                              ; // application-specific, non-standard direction: ignore
                         else
                               domError(ee);
                         }
@@ -2700,7 +2720,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                   }
             else {
                   t = new Text(score);
-                  t->setTextStyleType(TEXT_STYLE_TECHNIK);
+                  t->setTextStyleType(TEXT_STYLE_TECHNIQUE);
                   }
             if (!fontSize.isEmpty() || !fontStyle.isEmpty() || !fontWeight.isEmpty()) {
                   if (!fontSize.isEmpty()) {
@@ -2748,8 +2768,6 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                   if (type == "start") {
                         if (pedal) {
                               qDebug("overlapping pedal lines not supported");
-                              delete pedal;
-                              pedal = 0;
                               }
                         else {
                               pedal = new Pedal(score);
@@ -2759,7 +2777,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                                                 score->spatium(), placement,
                                                 hasYoffset, yoffset);
                               spanners[pedal] = QPair<int, int>(tick, -1);
-                              // qDebug("wedge pedal=%p inserted at first tick %d", pedal, tick);
+                              // qDebug("pedal=%p inserted at first tick %d", pedal, tick);
                               }
                         }
                   else if (type == "stop") {
@@ -2768,21 +2786,21 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                               }
                         else {
                               spanners[pedal].second = tick;
-                              // qDebug("wedge pedal=%p second tick %d", pedal, tick);
+                              // qDebug("pedal=%p second tick %d", pedal, tick);
                               pedal = 0;
                               }
                         }
                   else
-                        qDebug("unknown pedal %s", type.toLatin1().data());
+                        qDebug("unknown pedal %s", qPrintable(type));
                   }
             else {
                   Symbol* s = new Symbol(score);
                   s->setAlign(ALIGN_LEFT | ALIGN_BASELINE);
                   s->setOffsetType(OFFSET_SPATIUM);
                   if (type == "start")
-                        s->setSym(pedalPedSym);
+                        s->setSym(SymId::keyboardPedalPed);
                   else if (type == "stop")
-                        s->setSym(pedalasteriskSym);
+                        s->setSym(SymId::keyboardPedalUp);
                   else
                         qDebug("unknown pedal %s", type.toLatin1().data());
                   if (hasYoffset) s->setYoff(yoffset);
@@ -2819,8 +2837,6 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
             if (type == "crescendo" || type == "diminuendo") {
                   if (hairpin) {
                         qDebug("overlapping wedge not supported");
-                        delete hairpin;
-                        hairpin = 0;
                         }
                   else {
                         hairpin = new Hairpin(score);
@@ -2835,7 +2851,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                         // hairpin->setUserOff(rx, ry));
                         hairpin->setTrack((staff + rstaff) * VOICES);
                         spanners[hairpin] = QPair<int, int>(tick, -1);
-                        // qDebug("wedge hairpin=%p inserted at first tick %d", hairpin, tick);
+                        // qDebug("hairpin=%p inserted at first tick %d", hairpin, tick);
                         }
                   }
             else if (type == "stop") {
@@ -2844,7 +2860,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                         }
                   else {
                         spanners[hairpin].second = tick;
-                        // qDebug("wedge hairpin=%p second tick %d", hairpin, tick);
+                        // qDebug("hairpin=%p second tick %d", hairpin, tick);
                         hairpin = 0;
                         }
                   }
@@ -2856,9 +2872,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
             TextLine* b = bracket[n];
             if (type == "start") {
                   if (b) {
-                        qDebug("overlapping bracket with same number?");
-                        delete b;
-                        bracket[n] = 0;
+                        qDebug("overlapping bracket number %d", number);
                         }
                   else {
                         b = new TextLine(score);
@@ -2893,8 +2907,8 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
 
                         b->setTrack((staff + rstaff) * VOICES);
                         spanners[b] = QPair<int, int>(tick, -1);
-                        qDebug("bracket=%p inserted at first tick %d", b, tick);
                         bracket[n] = b;
+                        //qDebug("bracket=%p inserted at first tick %d", b, tick);
                         }
                   }
             else if (type == "stop") {
@@ -2919,8 +2933,8 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                         if (lineEnd == "up")
                               b->setEndHookHeight(-1 * b->endHookHeight());
                         spanners[b].second = tick;
-                        qDebug("bracket=%p second tick %d", b, tick);
                         bracket[n] = 0;
+                        //qDebug("bracket=%p second tick %d", b, tick);
                         }
                   }
             }
@@ -2929,9 +2943,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
             TextLine* b = dashes[n];
             if (type == "start") {
                   if (b) {
-                        printf("overlapping dashes with same number?\n");
-                        delete b;
-                        dashes[n] = 0;
+                        qDebug("overlapping dashes, number %d", number);
                         }
                   else {
                         b = new TextLine(score);
@@ -2955,14 +2967,13 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                         b->setLineStyle(Qt::DashLine);
                         b->setTrack((staff + rstaff) * VOICES);
                         spanners[b] = QPair<int, int>(tick, -1);
-                        qDebug("bracket=%p inserted at first tick %d", b, tick);
-                        // b->setTick(tick);
                         dashes[n] = b;
+                        //qDebug("dashes=%p inserted at first tick %d", b, tick);
                         }
                   }
             else if (type == "stop") {
                   if (!b) {
-                        printf("dashes stop without start, number %d\n", number);
+                        qDebug("dashes stop without start, number %d", number);
                         }
                   else {
                         // b->setTick2(tick);
@@ -2981,10 +2992,9 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                         ls2->setUserOff2(QPointF(rx + xoffset, ry + yoffset));
                         */
                         b->setEndHook(false);
-                        // score->add(b);
                         spanners[b].second = tick;
-                        qDebug("bracket=%p second tick %d", b, tick);
                         dashes[n] = 0;
+                        //qDebug("dashes=%p second tick %d", b, tick);
                         }
                   }
             }
@@ -2992,14 +3002,10 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
             if (type == "up" || type == "down") {
                   if (ottava) {
                         qDebug("overlapping octave-shift not supported");
-                        delete ottava;
-                        ottava = 0;
                         }
                   else {
                         if (!(ottavasize == 8 || ottavasize == 15)) {
                               qDebug("unknown octave-shift size %d", ottavasize);
-                              delete ottava;
-                              ottava = 0;
                               }
                         else {
                               ottava = new Ottava(score);
@@ -3013,7 +3019,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                                                 score->spatium(), placement,
                                                 hasYoffset, yoffset);
                               spanners[ottava] = QPair<int, int>(tick, -1);
-                              // qDebug("wedge ottava=%p inserted at first tick %d", ottava, tick);
+                              //qDebug("ottava=%p inserted at first tick %d", ottava, tick);
                               }
                         }
                   }
@@ -3023,7 +3029,7 @@ void MusicXml::direction(Measure* measure, int staff, QDomElement e)
                         }
                   else {
                         spanners[ottava].second = tick;
-                        // qDebug("wedge ottava=%p second tick %d", ottava, tick);
+                        //qDebug("ottava=%p second tick %d", ottava, tick);
                         ottava = 0;
                         }
                   }
@@ -3041,10 +3047,10 @@ static void setStaffLines(Score* score, int staffIdx, int stafflines)
       }
 
 //---------------------------------------------------------
-//   readTablature
+//   readStringData
 //---------------------------------------------------------
 
-static void readTablature(Tablature* t, QDomElement de)
+static void readStringData(StringData* t, QDomElement de)
       {
       t->setFrets(25);
 
@@ -3098,7 +3104,7 @@ static void readTablature(Tablature* t, QDomElement de)
 //   xmlStaffDetails
 //---------------------------------------------------------
 
-static void xmlStaffDetails(Score* score, int staff, Tablature* t, QDomElement e)
+static void xmlStaffDetails(Score* score, int staff, StringData* t, QDomElement e)
       {
       int number  = e.attribute(QString("number"), "-1").toInt();
       int staffIdx = staff;
@@ -3128,9 +3134,9 @@ static void xmlStaffDetails(Score* score, int staff, Tablature* t, QDomElement e
             }
 
       if (t) {
-            readTablature(t, e);
+            readStringData(t, e);
             Instrument* i = score->staff(staff)->part()->instr();
-            i->setTablature(t);
+            i->setStringData(t);
             }
       }
 
@@ -3257,9 +3263,9 @@ void MusicXml::xmlAttributes(Measure* measure, int staff, QDomElement e)
                   int staffIdx = staff;
                   if (number != -1)
                         staffIdx += number - 1;
-                  Tablature* t = 0;
+                  StringData* t = 0;
                   if (score->staff(staffIdx)->isTabStaff())
-                        t = new Tablature;
+                        t = new StringData;
                   xmlStaffDetails(score, staff, t, e);
                   }
             else if (e.tagName() == "instruments")
@@ -3272,6 +3278,8 @@ void MusicXml::xmlAttributes(Measure* measure, int staff, QDomElement e)
                               interval.diatonic = i;
                         else if (ee.tagName() == "chromatic")
                               interval.chromatic = i;
+                        else if (ee.tagName() == "octave-change")
+                              ; // TODO
                         else
                               domError(ee);
                         }
@@ -3452,40 +3460,6 @@ void MusicXml::xmlLyric(int trk, QDomElement e,
 static bool hasElem(const QDomElement e, const QString& tagname)
       {
       return !e.elementsByTagName(tagname).isEmpty();
-      }
-
-//---------------------------------------------------------
-//   nrOfGraceSegsReq
-//---------------------------------------------------------
-
-/**
- Determine the number of grace segments required for the grace note represented by \a n.
- */
-
-static int nrOfGraceSegsReq(QDomNode n)
-      {
-      if (!n.isElement() || n.nodeName() != "note") return 0;
-      QDomElement e = n.toElement();
-      if (!hasElem(e, "grace")) return 0;
-      int nsegs = 0;
-      // when counting starts in a grace chord but not at the first note,
-      // compensate for the missed first note
-      if (hasElem(e, "chord")) nsegs = 1;
-      // count the number of grace chords
-      // i.e the number of notes with grace but without chord child elements
-      for (; !e.isNull(); e = e.nextSiblingElement()) {
-            QString tag(e.tagName());
-            if (tag != "note")
-                  qDebug("nrOfGraceSegsReq: found non-note tag '%s'",
-                         qPrintable(tag));
-            if (!hasElem(e, "grace"))
-                  // non-grace note found, done
-                  return nsegs;
-            if (!hasElem(e, "chord"))
-                  // first note of grace chord found
-                  ++nsegs;
-            }
-      return 0;
       }
 
 //---------------------------------------------------------
@@ -3824,7 +3798,6 @@ void xmlTuplet(Tuplet*& tuplet, ChordRest* cr, int ticks, QDomElement e)
                 || (actualNotes == 1 && normalNotes == 1)) {
                   // set baselen
                   TDuration td = determineTupletBaseLen(tuplet);
-                  td.print();
                   // qDebug("stop tuplet %p basetype %d", tuplet, tupletType);
                   tuplet->setBaseLen(td);
                   // TODO determine usefulness of following check
@@ -4000,7 +3973,7 @@ static Accidental::AccidentalType convertAccidental(QString mxmlName)
  Convert a MusicXML notehead name to a MuseScore headgroup.
  */
 
-static Note::NoteHeadGroup convertNotehead(QString mxmlName)
+static NoteHeadGroup convertNotehead(QString mxmlName)
       {
       QMap<QString, int> map; // map MusicXML notehead name to a MuseScore headgroup
       map["slash"] = 5;
@@ -4018,11 +3991,11 @@ static Note::NoteHeadGroup convertNotehead(QString mxmlName)
       map["normal"] = 0;
 
       if (map.contains(mxmlName))
-            return Note::NoteHeadGroup(map.value(mxmlName));
+            return NoteHeadGroup(map.value(mxmlName));
       else
             qDebug("unknown notehead %s", qPrintable(mxmlName));
       // default: return 0
-      return Note::HEAD_NORMAL;
+      return NoteHeadGroup::HEAD_NORMAL;
       }
 
 //---------------------------------------------------------
@@ -4151,6 +4124,7 @@ void MusicXml::xmlNotations(Note* note, ChordRest* cr, int trk, int ticks, QDomE
                               //slur[slurNo]->setStart(tick, trk + voice);
                               //slur[slurNo]->setTrack((staff + relStaff) * VOICES);
                               slur[slurNo]->setTrack(track);
+                              slur[slurNo]->setTrack2(track);
                               score->addElement(slur[slurNo]);
                               if (endSlur) {
                                     slur[slurNo]->setTick(cr->tick());
@@ -4162,10 +4136,12 @@ void MusicXml::xmlNotations(Note* note, ChordRest* cr, int trk, int ticks, QDomE
                               if (slur[slurNo] == 0) {
                                     slur[slurNo] = new Slur(score);
                                     slur[slurNo]->setTick2(cr->tick());
+                                    slur[slurNo]->setTrack2(track);
                                     slur[slurNo]->setEndElement(cr);
                                     }
                               else {
                                     slur[slurNo]->setTick2(cr->tick());
+                                    slur[slurNo]->setTrack2(track);
                                     slur[slurNo]->setEndElement(cr);
                                     slur[slurNo] = 0;
                                     }
@@ -4510,7 +4486,7 @@ static FiguredBass* findLastFiguredBass(int track, Segment* seg)
  \a Staff is the number of first staff of the part this note belongs to.
  */
 
-void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*& beam, int& currentVoice, QDomElement e, QList<GraceNoteInfo>& gni)
+void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*& beam, QString& currentVoice, QDomElement e, QList<GraceNoteInfo>& gni)
       {
       int ticks = 0;
 #ifdef DEBUG_TICK
@@ -4519,6 +4495,7 @@ void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*
       QDomNode pn = e; // TODO remove pn
       QDomElement org_e = e; // save e for later
       QDomElement domElemNotations;
+      QString strVoice = "1";
       int voice = 0;
       int move  = 0;
 
@@ -4537,7 +4514,7 @@ void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*
       bool editorial = false;
       bool cautionary = false;
       TDuration durationType(TDuration::V_INVALID);
-      Note::NoteHeadGroup headGroup = Note::HEAD_NORMAL;
+      NoteHeadGroup headGroup = NoteHeadGroup::HEAD_NORMAL;
       bool noStem = false;
       QColor noteheadColor = QColor::Invalid;
       bool chord = false;
@@ -4551,7 +4528,7 @@ void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*
             QString tag(e2.tagName());
             QString s(e2.text());
             if (tag == "voice")
-                  voice = s.toInt() - 1;
+                  strVoice = s;
             else if (tag == "staff")
                   relStaff = s.toInt() - 1;
             else if (tag == "grace") {
@@ -4569,10 +4546,10 @@ void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*
       // Bug fix for Sibelius 7.1.3 which does not write <voice> for notes with <chord>
       if (!chord)
             // remember voice
-            currentVoice = voice;
+            currentVoice = strVoice;
       else
             // use voice from last note w/o <chord>
-            voice = currentVoice;
+            strVoice = currentVoice;
 
       // Musicxml voices are counted for all staffs of an
       // instrument. They are not limited. In mscore voices are associated
@@ -4587,23 +4564,23 @@ void MusicXml::xmlNote(Measure* measure, int staff, const QString& partId, Beam*
       // qDebug("voice mapper before: relStaff=%d voice=%d staff=%d\n", relStaff, voice, staff);
       int s; // staff mapped by voice mapper
       int v; // voice mapped by voice mapper
-      if (voicelist.value(voice).overlaps()) {
+      if (voicelist.value(strVoice).overlaps()) {
             // for overlapping voices, the staff does not change
             // and the voice is mapped and staff-dependent
             s = relStaff;
-            v = voicelist.value(voice).voice(s);
+            v = voicelist.value(strVoice).voice(s);
             }
       else {
             // for non-overlapping voices, both staff and voice are
             // set by the voice mapper
-            s = voicelist.value(voice).staff();
-            v = voicelist.value(voice).voice();
+            s = voicelist.value(strVoice).staff();
+            v = voicelist.value(strVoice).voice();
             }
 
       // qDebug("voice mapper before: relStaff=%d voice=%d s=%d v=%d", relStaff, voice, s, v);
       if (s < 0 || v < 0) {
-            qDebug("ImportMusicXml: too many voices (staff %d, relStaff %d, voice %d at line %d col %d)",
-                   staff + 1, relStaff, voice + 1, e.lineNumber(), e.columnNumber());
+            qDebug("ImportMusicXml: too many voices (staff %d, relStaff %d, voice %s at line %d col %d)",
+                   staff + 1, relStaff, qPrintable(strVoice), e.lineNumber(), e.columnNumber());
             return;
             }
       else {

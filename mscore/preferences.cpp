@@ -172,7 +172,8 @@ void Preferences::init()
       checkUpdateStartup      = 0;
 
       followSong              = true;
-      importCharset           = "GBK";
+      importCharsetOve        = "GBK";
+      importCharsetGP         = "UTF-8";
       importStyleFile         = "";
       shortestNote            = MScore::division/4;
 
@@ -192,10 +193,11 @@ void Preferences::init()
       myTemplatesPath = QDir(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("templates_directory",  "Templates"))).absolutePath();
       myPluginsPath   = QDir(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("plugins_directory",    "Plugins"))).absolutePath();
       sfPath          = QDir(QString("%1%2;%3/%4").arg(mscoreGlobalShare).arg("sound").arg(wd).arg(QCoreApplication::translate("soundfonts_directory", "Soundfonts"))).absolutePath();
-      sfzPath         = QDir(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("sfz_files_directory",  "SfzFiles"))).absolutePath();
+      sfzPath         = QDir(QString("%1/%2").arg(wd).arg(QCoreApplication::translate("sfz_files_directory",  "SFZ"))).absolutePath();
 
+      MScore::setNudgeStep(.1);         // cursor key (default 0.1)
       MScore::setNudgeStep10(1.0);      // Ctrl + cursor key (default 1.0)
-      MScore::setNudgeStep50(0.01);      // Alt  + cursor key (default 0.01)
+      MScore::setNudgeStep50(0.01);     // Alt  + cursor key (default 0.01)
 
       MScore::setHRaster(2);        // _spatium / value
       MScore::setVRaster(2);
@@ -313,7 +315,8 @@ void Preferences::write()
       s.setValue("defaultPlayDuration", MScore::defaultPlayDuration);
       s.setValue("importStyleFile", importStyleFile);
       s.setValue("shortestNote", shortestNote);
-      s.setValue("importCharset", importCharset);
+      s.setValue("importCharsetOve", importCharsetOve);
+      s.setValue("importCharsetGP", importCharsetGP);
       s.setValue("warnPitchRange", MScore::warnPitchRange);
       s.setValue("followSong", followSong);
 
@@ -453,7 +456,8 @@ void Preferences::read()
       MScore::defaultPlayDuration = s.value("defaultPlayDuration", MScore::defaultPlayDuration).toInt();
       importStyleFile        = s.value("importStyleFile", importStyleFile).toString();
       shortestNote           = s.value("shortestNote", shortestNote).toInt();
-      importCharset          = s.value("importCharset", importCharset).toString();
+      importCharsetOve          = s.value("importCharsetOve", importCharsetOve).toString();
+      importCharsetGP          = s.value("importCharsetGP", importCharsetGP).toString();
       MScore::warnPitchRange = s.value("warnPitchRange", MScore::warnPitchRange).toBool();
       followSong             = s.value("followSong", followSong).toBool();
 
@@ -482,8 +486,12 @@ void Preferences::read()
       dir.mkpath(myImagesPath);
       dir.mkpath(myTemplatesPath);
       dir.mkpath(myPluginsPath);
-//      dir.mkpath(mySoundFontsPath);
-//      dir.mkpath(mySfzFilesPath);
+      foreach (QString path, sfPath.split(";")) {
+            dir.mkpath(path);
+            }
+      foreach (QString path, sfzPath.split(";")) {
+            dir.mkpath(path);
+            }
 
       MScore::setHRaster(s.value("hraster", MScore::hRaster()).toInt());
       MScore::setVRaster(s.value("vraster", MScore::vRaster()).toInt());
@@ -947,14 +955,18 @@ void PreferenceDialog::updateValues()
       useImportBuildinStyle->setChecked(prefs.importStyleFile.isEmpty());
       useImportStyleFile->setChecked(!prefs.importStyleFile.isEmpty());
 
-      importCharsetList->clear();
       QList<QByteArray> charsets = QTextCodec::availableCodecs();
       qSort(charsets.begin(), charsets.end());
       int idx = 0;
+      importCharsetListOve->clear();
+      importCharsetListGP->clear();
       foreach (QByteArray charset, charsets) {
-            importCharsetList->addItem(charset);
-            if (charset == prefs.importCharset)
-                  importCharsetList->setCurrentIndex(idx);
+            importCharsetListOve->addItem(charset);
+            importCharsetListGP->addItem(charset);
+            if (charset == prefs.importCharsetOve)
+                  importCharsetListOve->setCurrentIndex(idx);
+            if (charset == prefs.importCharsetGP)
+                  importCharsetListGP->setCurrentIndex(idx);
             idx++;
             }
 
@@ -1397,7 +1409,8 @@ void PreferenceDialog::apply()
             }
       prefs.shortestNote = ticks;
 
-      prefs.importCharset = importCharsetList->currentText();
+      prefs.importCharsetOve = importCharsetListOve->currentText();
+      prefs.importCharsetGP = importCharsetListGP->currentText();
       MScore::warnPitchRange = warnPitchRange->isChecked();
 
       prefs.useOsc  = oscServer->isChecked();
@@ -1441,7 +1454,7 @@ bool Preferences::readDefaultStyle()
       {
       if (defaultStyleFile.isEmpty())
             return false;
-      MStyle* style = new MStyle;
+      MStyle* style = new MStyle(*MScore::defaultStyle());
       QFile f(defaultStyleFile);
       if (!f.open(QIODevice::ReadOnly))
             return false;

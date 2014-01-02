@@ -91,7 +91,7 @@
 #include "libmscore/breath.h"
 #include "libmscore/chordline.h"
 #include "libmscore/figuredbass.h"
-#include "libmscore/tablature.h"
+#include "libmscore/stringdata.h"
 #include "libmscore/rehearsalmark.h"
 #include "libmscore/qzipwriter_p.h"
 #include "libmscore/fret.h"
@@ -105,6 +105,12 @@ namespace Ms {
 // #define DEBUG_CLEF true
 // #define DEBUG_REPEATS true
 // #define DEBUG_TICK true
+
+#ifdef DEBUG_CLEF
+#define clefDebug(...) qDebug(__VA_ARGS__)
+#else
+#define clefDebug(...) ;
+#endif
 
 //---------------------------------------------------------
 //   typedefs
@@ -273,8 +279,6 @@ class ExportMusicXml {
       void keysig(int key, int staff = 0, bool visible = true);
       void barlineLeft(Measure* m);
       void barlineRight(Measure* m);
-      void pitch2xml(Note* note, char& c, int& alter, int& octave);
-      void unpitch2xml(Note* note, char& c, int& octave);
       void lyrics(const QList<Lyrics*>* ll, const int trk);
       void work(const MeasureBase* measure);
       void calcDivMoveToTick(int t);
@@ -785,13 +789,13 @@ void ExportMusicXml::calcDivMoveToTick(int t)
       {
       if (t < tick) {
 #ifdef DEBUG_TICK
-            qDebug("backup %d\n", tick - t);
+            qDebug("backup %d", tick - t);
 #endif
             addInteger(tick - t);
             }
       else if (t > tick) {
 #ifdef DEBUG_TICK
-            qDebug("forward %d\n", t - tick);
+            qDebug("forward %d", t - tick);
 #endif
             addInteger(t - tick);
             }
@@ -1076,55 +1080,30 @@ static void midipitch2xml(int pitch, char& c, int& alter, int& octave)
 //   tabpitch2xml
 //---------------------------------------------------------
 
-static char TpcNames[] = "FCGDAEB";
-
-static void tabpitch2xml(int pitch, int tpc, char& c, int& alter, int& octave)
+static void tabpitch2xml(const int pitch, const int tpc, QString& s, int& alter, int& octave)
       {
-      c      = TpcNames[(tpc + 1) % 7];
-      alter  = (tpc + 1) / 7 - 2;
-      octave = pitch / 12 - 1;
+      s      = tpc2stepName(tpc);
+      alter  = tpc2alterByKey(tpc, 0);
+      octave = (pitch - alter) / 12 - 1;
       if (alter < -2 || 2 < alter)
-            qDebug("tabpitch2xml(pitch %d, tpc %d) problem:  step %c, alter %d, octave %d",
-                   pitch, tpc, c, alter, octave);
+            qDebug("tabpitch2xml(pitch %d, tpc %d) problem:  step %s, alter %d, octave %d",
+                   pitch, tpc, qPrintable(s), alter, octave);
       else
-            qDebug("tabpitch2xml(pitch %d, tpc %d) step %c, alter %d, octave %d",
-                   pitch, tpc, c, alter, octave);
+            qDebug("tabpitch2xml(pitch %d, tpc %d) step %s, alter %d, octave %d",
+                   pitch, tpc, qPrintable(s), alter, octave);
       }
-
+      
 //---------------------------------------------------------
 //   pitch2xml
 //---------------------------------------------------------
 
-// TODO cleanup / validation
-// TBD: use tpc/pitch instead (like tabpitch2xml)
+// TODO validation
 
-void ExportMusicXml::pitch2xml(Note* note, char& c, int& alter, int& octave)
+static void pitch2xml(const Note* note, QString& s, int& alter, int& octave)
       {
-      static char table1[]  = "FEDCBAG";
-
-      Chord* chord = note->chord();
-
-      int tick   = chord->tick();
-
-      int staffIdx = chord->staffIdx() + chord->staffMove();
-      Staff* i   = note->score()->staff(staffIdx);
-
-      ClefType clef   = i->clef(tick);
-      int offset = ClefInfo::pitchOffset(clef) - 45;  // HACK
-
-      int step   = (note->line() - offset + 700) % 7;
-      // step = 6 - ((absoluteStaffLine(note->line(), clef) + 3)%7));
-
-      // c          = "CDEFGA"[absoluteStaffLine(note->line(), clef) % 7];
-      c          = table1[step];
-
-      // printf("====<%c>  <%c>\n", c, "CDEFGAB"[absoluteStaffLine(note->line(), clef) % 7]);
-
-      int pitch  = note->pitch() - 12;
-      octave     = pitch / 12;
-
-      static int table2[7] = { 5, 4, 2, 0, 11, 9, 7 };
-      int npitch = table2[step] + (octave + 1) * 12;
+      s      = tpc2stepName(note->tpc());
+      alter  = tpc2alterByKey(note->tpc(), 0);
+      octave = (note->pitch() - alter) / 12 - 1;
 
       //
       // HACK:
@@ -1132,13 +1111,13 @@ void ExportMusicXml::pitch2xml(Note* note, char& c, int& alter, int& octave)
       // note->pitch() and note->line()
       // note->line() is determined by drumMap
       //
-      if (clef == ClefType::PERC || clef == ClefType::PERC2) {
+      int tick        = note->chord()->tick();
+      Staff* st       = note->staff();
+      ClefType ct     = st->clef(tick);
+      if (ct == ClefType::PERC || ct == ClefType::PERC2) {
             alter = 0;
-            pitch = line2pitch(note->line(), clef, 0);
-            octave = (pitch / 12) - 1;
-            }
-      else
-            alter = note->pitch() - npitch;
+            octave = line2pitch(note->line(), ct, 0) / 12 - 1;
+      }
 
       // correct for ottava lines
       int ottava = 0;
@@ -1148,26 +1127,13 @@ void ExportMusicXml::pitch2xml(Note* note, char& c, int& alter, int& octave)
             case   0: ottava =  0; break;
             case -12: ottava = -1; break;
             case -24: ottava = -2; break;
-            default:  qDebug("pitch2xml() tick=%d pitch()=%d ppitch()=%dd",
+            default:  qDebug("pitch2xml() tick=%d pitch()=%d ppitch()=%d",
                              tick, note->pitch(), note->ppitch());
             }
       octave += ottava;
 
-      //deal with Cb and B#
-      if (alter > 2) {
-            qDebug("pitch2xml problem: alter %d step %d(line %d) octave %d clef %d(offset %d)\n",
-                   alter, step, note->line(), octave, clef, offset);
-            //HACK:
-            alter  -= 12;
-            octave += 1;
-            }
-      if (alter < -2) {
-            qDebug("pitch2xml problem: alter %d step %d(line %d) octave %d clef %d(offset %d)\n",
-                   alter, step, note->line(), octave, clef, offset);
-            //HACK:
-            alter  += 12;
-            octave -= 1;
-            }
+      //qDebug("pitch2xml(pitch %d, tpc %d, ottava %d clef %hhd) step    %s, alter    %d, octave    %d",
+      //       note->pitch(), note->tpc(), ottava, clef, qPrintable(s), alter, octave);
       }
 
 // unpitch2xml -- calculate display-step and display-octave for an unpitched note
@@ -1176,7 +1142,7 @@ void ExportMusicXml::pitch2xml(Note* note, char& c, int& alter, int& octave)
 // Finale Notepad 2012 does not import a three line staff with percussion clef correctly
 // Same goes for Sibelius 6 in case of three or five line staff with percussion clef
 
-void ExportMusicXml::unpitch2xml(Note* note, char& step, int& octave)
+static void unpitch2xml(const Note* note, QString& s, int& octave)
       {
       static char table1[]  = "FEDCBAG";
 
@@ -1201,7 +1167,7 @@ void ExportMusicXml::unpitch2xml(Note* note, char& step, int& octave)
       // index in table1 to get step
       int stepIdx     = (line5g + 700) % 7;
       // get step
-      step            = table1[stepIdx];
+      s               = table1[stepIdx];
       // calculate octave, offset "3" correcting for the fact that an octave starts
       // with C instead of F
       octave =(3 - line5g + 700) / 7 + 5 - 100;
@@ -1268,7 +1234,7 @@ static void ending(Xml& xml, Volta* v, bool left)
                         type = "stop";
                         break;
                   default:
-                        qDebug("unknown volta subtype %d\n", st);
+                        qDebug("unknown volta subtype %d", st);
                         type = "unknown";
                         break;
                   }
@@ -1334,7 +1300,7 @@ void ExportMusicXml::barlineRight(Measure* m)
                               xml.tag("bar-style", QString("light-heavy"));
                               break;
                         default:
-                              qDebug("ExportMusicXml::bar(): bar subtype %d not supported\n", bst);
+                              qDebug("ExportMusicXml::bar(): bar subtype %d not supported", bst);
                               break;
                         }
                   }
@@ -1352,7 +1318,7 @@ void ExportMusicXml::barlineRight(Measure* m)
 
 void ExportMusicXml::moveToTick(int t)
       {
-      // qDebug("ExportMusicXml::moveToTick(t=%d) tick=%d\n", t, tick);
+      // qDebug("ExportMusicXml::moveToTick(t=%d) tick=%d", t, tick);
       if (t < tick) {
 #ifdef DEBUG_TICK
             qDebug(" -> backup");
@@ -1429,9 +1395,8 @@ void ExportMusicXml::keysig(int key, int staff, bool visible)
 
 void ExportMusicXml::clef(int staff, ClefType clef)
       {
-#ifdef DEBUG_CLEF
-      qDebug("ExportMusicXml::clef(staff %d, clef %d)", staff, clef);
-#endif
+      clefDebug("ExportMusicXml::clef(staff %d, clef %d)", staff, clef);
+
       attr.doAttr(xml, true);
       if (staff)
             xml.stag(QString("clef number=\"%1\"").arg(staff));
@@ -1533,7 +1498,7 @@ static void tremoloSingleStartStop(Chord* chord, Notations& notations, Ornaments
                         case TREMOLO_R16: count = 2; break;
                         case TREMOLO_R32: count = 3; break;
                         case TREMOLO_R64: count = 4; break;
-                        default: qDebug("unknown tremolo single %d\n", st); break;
+                        default: qDebug("unknown tremolo single %d", st); break;
                         }
                   }
             else if (chord->tremoloChordType() == TremoloFirstNote) {
@@ -1543,7 +1508,7 @@ static void tremoloSingleStartStop(Chord* chord, Notations& notations, Ornaments
                         case TREMOLO_C16: count = 2; break;
                         case TREMOLO_C32: count = 3; break;
                         case TREMOLO_C64: count = 4; break;
-                        default: qDebug("unknown tremolo double %d\n", st); break;
+                        default: qDebug("unknown tremolo double %d", st); break;
                         }
                   }
             else if (chord->tremoloChordType() == TremoloSecondNote) {
@@ -1553,10 +1518,10 @@ static void tremoloSingleStartStop(Chord* chord, Notations& notations, Ornaments
                         case TREMOLO_C16: count = 2; break;
                         case TREMOLO_C32: count = 3; break;
                         case TREMOLO_C64: count = 4; break;
-                        default: qDebug("unknown tremolo double %d\n", st); break;
+                        default: qDebug("unknown tremolo double %d", st); break;
                         }
                   }
-            else qDebug("unknown tremolo subtype %d\n", st);
+            else qDebug("unknown tremolo subtype %d", st);
 
 
             if (type != "" && count > 0) {
@@ -1852,7 +1817,7 @@ static void chordAttributes(Chord* chord, Notations& notations, Technical& techn
                         // ignore, handled with technical
                         break;
                   default:
-                        qDebug("unknown chord attribute %s\n", qPrintable(a->subtypeUserName()));
+                        qDebug("unknown chord attribute %s", qPrintable(a->subtypeUserName()));
                         break;
                   }
             }
@@ -1947,7 +1912,7 @@ static void arpeggiate(Arpeggio* arp, bool front, bool back, Xml& xml, Notations
                         }
                   break;
             default:
-                  qDebug("unknown arpeggio subtype %d\n", int(arp->arpeggioType()));
+                  qDebug("unknown arpeggio subtype %d", int(arp->arpeggioType()));
                   break;
             }
       }
@@ -1964,12 +1929,12 @@ static Chord* nextChord(Chord* ch)
             s = s->next1();
             }
       if (s == 0) {
-            // qDebug("no segment for second note of glissando found\n");
+            // qDebug("no segment for second note of glissando found");
             return 0;
             }
       Chord* c = static_cast<Chord*>(s->element(ch->track()));
       if (c == 0 || c->type() != Element::CHORD) {
-            // qDebug("no second note for glissando found, track %d\n", track());
+            // qDebug("no second note for glissando found, track %d", track());
             return 0;
             }
       return c;
@@ -1993,9 +1958,9 @@ static int determineTupletNormalTicks(ChordRest const* const chord)
       Tuplet const* const t = chord->tuplet();
       if (!t)
             return 0;
-      qDebug("determineTupletNormalTicks t %p baselen %d", t, t->baseLen().ticks());
-      for (int i = 0; i < t->elements().size(); ++i)
-            qDebug("determineTupletNormalTicks t %p i %d ticks %d", t, i, t->elements().at(i)->duration().ticks());
+//      qDebug("determineTupletNormalTicks t %p baselen %d", t, t->baseLen().ticks());
+//      for (int i = 0; i < t->elements().size(); ++i)
+//            qDebug("determineTupletNormalTicks t %p i %d ticks %d", t, i, t->elements().at(i)->duration().ticks());
       for (int i = 1; i < t->elements().size(); ++i)
             if (t->elements().at(0)->duration().ticks() != t->elements().at(i)->duration().ticks())
                   return t->baseLen().ticks();
@@ -2011,7 +1976,7 @@ static void writeBeam(Xml& xml, ChordRest* cr, Beam* b)
       const QList<ChordRest*>& elements = b->elements();
       int idx = elements.indexOf(cr);
       if (idx == -1) {
-            qDebug("Beam::writeMusicXml(): cannot find ChordRest\n");
+            qDebug("Beam::writeMusicXml(): cannot find ChordRest");
             return;
             }
       int blp = -1; // beam level previous chord
@@ -2115,49 +2080,27 @@ void ExportMusicXml::chord(Chord* chord, int staff, const QList<Lyrics*>* ll, bo
             if (note != nl.front())
                   xml.tagE("chord");
 
-            char c;
-            int alter;
-            int octave;
-            char buffer[2];
-
-            // TODO: following code requires further cleanup and validation
+            // step / alter / octave
+            QString step;
+            int alter = 0;
+            int octave = 0;
             if (chord->staff() && chord->staff()->isTabStaff()) {
-                  tabpitch2xml(note->pitch(), note->tpc(), c, alter, octave);
-                  buffer[0] = c;
-                  buffer[1] = 0;
-                  // pitch
-                  xml.stag("pitch");
-                  xml.tag("step", QString(buffer));
-                  if (alter)
-                        xml.tag("alter", alter);
-                  xml.tag("octave", octave);
-                  xml.etag();
-                  }
-
+                  tabpitch2xml(note->pitch(), note->tpc(), step, alter, octave);
+            }
             else {
                   if (!useDrumset) {
-                        pitch2xml(note, c, alter, octave);
-                        buffer[0] = c;
-                        buffer[1] = 0;
-                        // pitch
-                        xml.stag("pitch");
-                        xml.tag("step", QString(buffer));
-                        if (alter)
-                              xml.tag("alter", alter);
-                        xml.tag("octave", octave);
-                        xml.etag();
-                        }
-                  else {
-                        // unpitched
-                        unpitch2xml(note, c, octave);
-                        buffer[0] = c;
-                        buffer[1] = 0;
-                        xml.stag("unpitched");
-                        xml.tag("display-step", QString(buffer));
-                        xml.tag("display-octave", octave);
-                        xml.etag();
-                        }
+                        pitch2xml(note, step, alter, octave);
                   }
+                  else {
+                        unpitch2xml(note, step, octave);
+                  }
+            }
+            xml.stag(useDrumset ? "unpitched" : "pitch");
+            xml.tag(useDrumset ? "display-step" : "step", step);
+            if (alter)
+                  xml.tag("alter", alter);
+            xml.tag(useDrumset ? "display-octave" : "octave", octave);
+            xml.etag();
 
             // duration
             if (!grace)
@@ -2168,7 +2111,7 @@ void ExportMusicXml::chord(Chord* chord, int staff, const QList<Lyrics*>* ll, bo
             if (note->tieFor())
                   xml.tagE("tie type=\"start\"");
 
-            //instrument for unpitched
+            // instrument for unpitched
             if (useDrumset)
                   xml.tagE(QString("instrument id=\"P%1-I%2\"").arg(_score->parts().indexOf(note->staff()->part()) + 1).arg(note->pitch() + 1));
 
@@ -2195,7 +2138,7 @@ void ExportMusicXml::chord(Chord* chord, int staff, const QList<Lyrics*>* ll, bo
 
             QString s = tick2xml(note->chord()->actualTicks() * actNotes * tremCorr / nrmNotes, &dots);
             if (s.isEmpty()) {
-                  qDebug("no note type found for ticks %d\n",
+                  qDebug("no note type found for ticks %d",
                          note->chord()->actualTicks());
                   }
             xml.tag("type", s);
@@ -2233,7 +2176,7 @@ void ExportMusicXml::chord(Chord* chord, int staff, const QList<Lyrics*>* ll, bo
                         case Accidental::ACC_SORI:               s = "sori";                 break; //sori
                         case Accidental::ACC_KORON:              s = "koron";                break; //koron
                         default:
-                              qDebug("unknown accidental %d\n", int(acc->accidentalType()));
+                              qDebug("unknown accidental %d", int(acc->accidentalType()));
                         }
                   if (s != "") {
                         if (note->accidental()->hasBracket())
@@ -2285,29 +2228,29 @@ void ExportMusicXml::chord(Chord* chord, int staff, const QList<Lyrics*>* ll, bo
             QColor noteheadColor = note->color();
             if (noteheadColor != MScore::defaultColor)
                   noteheadTagname += " color=\"" + noteheadColor.name().toUpper() + "\"";
-            if (note->headGroup() == 5)
+            if (note->headGroup() == NoteHeadGroup::HEAD_SLASH)
                   xml.tag(noteheadTagname, "slash");
-            else if (note->headGroup() == 3)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_TRIANGLE)
                   xml.tag(noteheadTagname, "triangle");
-            else if (note->headGroup() == 2)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_DIAMOND)
                   xml.tag(noteheadTagname, "diamond");
-            else if (note->headGroup() == 1)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_CROSS)
                   xml.tag(noteheadTagname, "x");
-            else if (note->headGroup() == 6)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_XCIRCLE)
                   xml.tag(noteheadTagname, "circle-x");
-            else if (note->headGroup() == 7)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_DO)
                   xml.tag(noteheadTagname, "do");
-            else if (note->headGroup() == 8)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_RE)
                   xml.tag(noteheadTagname, "re");
-            else if (note->headGroup() == 4)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_MI)
                   xml.tag(noteheadTagname, "mi");
-            else if (note->headGroup() == 9)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_FA)
                   xml.tag(noteheadTagname, "fa");
-            else if (note->headGroup() == 10)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_LA)
                   xml.tag(noteheadTagname, "la");
-            else if (note->headGroup() == 11)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_TI)
                   xml.tag(noteheadTagname, "ti");
-            else if (note->headGroup() == 12)
+            else if (note->headGroup() == NoteHeadGroup::HEAD_SOL)
                   xml.tag(noteheadTagname, "so");
             else if (noteheadColor != MScore::defaultColor)
                   xml.tag(noteheadTagname, "normal");
@@ -2632,20 +2575,23 @@ static void partGroupStart(Xml& xml, int number, int bracket)
       xml.stag(QString("part-group type=\"start\" number=\"%1\"").arg(number));
       QString br = "";
       switch (bracket) {
+            case NO_BRACKET:
+                  br = "none";
+                  break;
             case BRACKET_NORMAL:
                   br = "bracket";
                   break;
             case BRACKET_BRACE:
                   br = "brace";
                   break;
-            case BRACKET_SQUARE:
-                  br = "square";
-                  break;
             case BRACKET_LINE:
                   br = "line";
                   break;
+            case BRACKET_SQUARE:
+                  br = "square";
+                  break;
             default:
-                  qDebug("bracket subtype %d not understood\n", bracket);
+                  qDebug("bracket subtype %d not understood", bracket);
             }
       if (br != "")
             xml.tag("group-symbol", br);
@@ -2755,7 +2701,7 @@ static bool findMetronome(QString words,
                   else wordsLeft = s1;
                   int equalsPos = equals.indexIn(s2);
                   if (equalsPos != -1) metroLeft = s2.mid(0, equalsPos);
-                  // else qDebug("\ncan't find equals in s2\n");
+                  // else qDebug("\ncan't find equals in s2");
                   if (hasParen) {
                         metroRight = s3.mid(0, rparen);
                         wordsRight = s3.mid(rparen + 1, s3.length() - rparen - 1);
@@ -2929,7 +2875,7 @@ void ExportMusicXml::ottava(Ottava const* const ot, int staff, int tick)
                         tp = "up";
                         break;
                   default:
-                        qDebug("ottava subtype %d not understood\n", st);
+                        qDebug("ottava subtype %d not understood", st);
                   }
             if (sz && tp)
                   xml.tagE("octave-shift type=\"%s\" size=\"%s\"", tp, sz);
@@ -2940,7 +2886,7 @@ void ExportMusicXml::ottava(Ottava const* const ot, int staff, int tick)
             else if (st == 1 || st == 3)
                   xml.tagE("octave-shift type=\"stop\" size=\"15\"");
             else
-                  qDebug("ottava subtype %d not understood\n", st);
+                  qDebug("ottava subtype %d not understood", st);
             }
       xml.etag();
       directionETag(xml, staff);
@@ -3173,7 +3119,7 @@ void ExportMusicXml::lyrics(const QList<Lyrics*>* ll, const int trk)
                               case Lyrics::END:    s = "end";    break;
                               case Lyrics::MIDDLE: s = "middle"; break;
                               default:
-                                    qDebug("unknown syllabic %d\n", syl);
+                                    qDebug("unknown syllabic %d", syl);
                               }
                         xml.tag("syllabic", s);
                         xml.tag("text", (l)->text());
@@ -3250,7 +3196,7 @@ static void directionJump(Xml& xml, const Jump* const jp)
                   sound = "dalsegno=\"" + jp->jumpTo() + "\"";
             }
       else
-            qDebug("jump type=%d not implemented\n", jtp);
+            qDebug("jump type=%d not implemented", jtp);
       if (sound != "") {
             xml.stag("direction placement=\"above\"");
             xml.stag("direction-type");
@@ -3303,7 +3249,7 @@ static void directionMarker(Xml& xml, const Marker* const m)
                   sound = "tocoda=\"" + m->label() + "\"";
             }
       else
-            qDebug("marker type=%d not implemented\n", mtp);
+            qDebug("marker type=%d not implemented", mtp);
       if (sound != "") {
             xml.stag("direction placement=\"above\"");
             xml.stag("direction-type");
@@ -3542,10 +3488,10 @@ static bool elementRighter(const Element* e1, const Element* e2)
 
 static void measureStyle(Xml& xml, Attributes& attr, Measure* m)
       {
-      if (m->multiMeasure() > 0) {
+      if (m->isMMRest()) {
             attr.doAttr(xml, true);
             xml.stag("measure-style");
-            xml.tag("multiple-rest", m->multiMeasure());
+            xml.tag("multiple-rest", 3); // TODO MM    m->multiMeasure());
             xml.etag();
             }
       }
@@ -3579,12 +3525,12 @@ static const FretDiagram* findFretDiagram(int strack, int etrack, int track, Seg
 // in MusicXML they are combined in the harmony element. This means they have to be matched.
 // TODO: replace/repair current algorithm (which can only handle one FRET_DIAGRAM and one HARMONY)
 
-static void annotations(ExportMusicXml* exp, Xml& xml, int strack, int etrack, int track, int sstaff, Segment* seg)
+static void annotations(ExportMusicXml* exp, Xml&, int strack, int etrack, int track, int sstaff, Segment* seg)
       {
       if (seg->segmentType() == Segment::SegChordRest) {
 
             const FretDiagram* fd = findFretDiagram(strack, etrack, track, seg);
-            // if (fd) qDebug("annotations seg %p found fret diagram %p", seg, fd);
+            // if (fd) qDebug("annotations seg %p found fretboard diagram %p", seg, fd);
 
             foreach(const Element* e, seg->annotations()) {
 
@@ -3621,7 +3567,7 @@ static void annotations(ExportMusicXml* exp, Xml& xml, int strack, int etrack, i
                               case Element::JUMP:         // ignore
                                     break;
                               default:
-                                    qDebug("annotations: direction type %s at tick %d not implemented\n",
+                                    qDebug("annotations: direction type %s at tick %d not implemented",
                                            Element::name(e->type()), seg->tick());
                                     break;
                               }
@@ -3629,7 +3575,7 @@ static void annotations(ExportMusicXml* exp, Xml& xml, int strack, int etrack, i
                   } // foreach
             if (fd)
                   // found fd but no harmony, cannot write (MusicXML would be invalid)
-                  qDebug("annotations seg %p found fret diagram %p w/o harmony: cannot write",
+                  qDebug("annotations seg %p found fretboard diagram %p w/o harmony: cannot write",
                          seg, fd);
             }
       }
@@ -3728,7 +3674,7 @@ static void spannerStart(ExportMusicXml* exp, int strack, int etrack, int track,
                                     // ignore (written as <note><notations><ornaments><wavy-line>
                                     break;
                               default:
-                                    qDebug("spannerStart: direction type %s at tick %d not implemented\n",
+                                    qDebug("spannerStart: direction type %s at tick %d not implemented",
                                            Element::name(e->type()), seg->tick());
                                     break;
                               }
@@ -3773,7 +3719,7 @@ static void spannerStop(ExportMusicXml* exp, int strack, int etrack, int track, 
                               // ignore (written as <note><notations><ornaments><wavy-line>
                               break;
                         default:
-                              qDebug("spannerStop: direction type %s at tick %d not implemented\n",
+                              qDebug("spannerStop: direction type %s at tick %d not implemented",
                                      Element::name(e->type()), seg->tick());
                               break;
                         }
@@ -3891,6 +3837,20 @@ static void identification(Xml& xml, Score const* const score)
       }
 
 //---------------------------------------------------------
+//  findPartGroupNumber
+//---------------------------------------------------------
+
+static int findPartGroupNumber(int* partGroupEnd)
+      {
+      // find part group number
+      for (int number = 0; number < MAX_PART_GROUPS; ++number)
+            if (partGroupEnd[number] == -1)
+                  return number;
+      qDebug("no free part group number");
+      return MAX_PART_GROUPS;
+      }
+
+//---------------------------------------------------------
 //  write
 //---------------------------------------------------------
 
@@ -3925,39 +3885,46 @@ void ExportMusicXml::write(QIODevice* dev)
       xml.stag("part-list");
       const QList<Part*>& il = _score->parts();
       int staffCount = 0;                       // count sum of # staves in parts
-      int partGroupEnd[MAX_PART_GROUPS];        // staff where part group ends
+      int partGroupEnd[MAX_PART_GROUPS];        // staff where part group ends (bracketSpan is in staves, not parts)
       for (int i = 0; i < MAX_PART_GROUPS; i++)
             partGroupEnd[i] = -1;
       for (int idx = 0; idx < il.size(); ++idx) {
             Part* part = il.at(idx);
+            bool bracketFound = false;
+            // handle brackets
             for (int i = 0; i < part->nstaves(); i++) {
                   Staff* st = part->staff(i);
                   if (st) {
                         for (int j = 0; j < st->bracketLevels(); j++) {
                               if (st->bracket(j) != NO_BRACKET) {
+                                    bracketFound = true;
                                     if (i == 0) {
                                           // OK, found bracket in first staff of part
                                           // filter out implicit brackets
-                                          if (st->bracketSpan(j) != part->nstaves()) {
-                                                // find part group number
-                                                int number = 0;
-                                                for (; number < MAX_PART_GROUPS; number++)
-                                                      if (partGroupEnd[number] == -1)
-                                                            break;
+                                          if (!(st->bracketSpan(j) == part->nstaves()
+                                                && st->bracket(j) == BRACKET_BRACE)) {
+                                                // add others
+                                                int number = findPartGroupNumber(partGroupEnd);
                                                 if (number < MAX_PART_GROUPS) {
                                                       partGroupStart(xml, number + 1, st->bracket(j));
-                                                      partGroupEnd[number] = idx + st->bracketSpan(j);
+                                                      partGroupEnd[number] = staffCount + st->bracketSpan(j);
                                                       }
-                                                else
-                                                      qDebug("no free part group number");
                                                 }
                                           }
                                     else {
                                           // bracket in other staff not supported in MusicXML
-                                          qDebug("bracket starting in staff %d not supported\n", i + 1);
+                                          qDebug("bracket starting in staff %d not supported", i + 1);
                                           }
                                     }
                               }
+                        }
+                  }
+            // handle bracket none
+            if (!bracketFound && part->nstaves() > 1) {
+                  int number = findPartGroupNumber(partGroupEnd);
+                  if (number < MAX_PART_GROUPS) {
+                        partGroupStart(xml, number + 1, NO_BRACKET);
+                        partGroupEnd[number] = idx + part->nstaves();
                         }
                   }
 
@@ -3970,7 +3937,7 @@ void ExportMusicXml::write(QIODevice* dev)
                   Drumset* drumset = part->instr()->drumset();
                   for (int i = 0; i < 128; ++i) {
                         DrumInstrument di = drumset->drum(i);
-                        if (di.notehead >= 0) {
+                        if (di.notehead != NoteHeadGroup::HEAD_INVALID) {
                               xml.stag(QString("score-instrument id=\"P%1-I%2\"").arg(idx+1).arg(i + 1));
                               xml.tag("instrument-name", di.name);
                               xml.etag();
@@ -3978,7 +3945,7 @@ void ExportMusicXml::write(QIODevice* dev)
                         }
                   for (int i = 0; i < 128; ++i) {
                         DrumInstrument di = drumset->drum(i);
-                        if (di.notehead >= 0) {
+                        if (di.notehead != NoteHeadGroup::HEAD_INVALID) {
                               xml.stag(QString("midi-instrument id=\"P%1-I%2\"").arg(idx+1).arg(i + 1));
                               if (part->midiChannel() >= 0) // <0 is not valid
                                     xml.tag("midi-channel", part->midiChannel() + 1);
@@ -4081,10 +4048,12 @@ void ExportMusicXml::write(QIODevice* dev)
 
                   if (!previousMeasure)
                         currentSystem = TopSystem;
-                  else if (m->parent()->parent() != previousMeasure->parent()->parent())
-                        currentSystem = NewPage;
-                  else if (m->parent() != previousMeasure->parent())
-                        currentSystem = NewSystem;
+                  else if (m->parent() && previousMeasure->parent()) {
+                        if (m->parent()->parent() != previousMeasure->parent()->parent())
+                              currentSystem = NewPage;
+                        else if (m->parent() != previousMeasure->parent())
+                              currentSystem = NewSystem;
+                        }
 
                   bool prevMeasLineBreak = false;
                   bool prevMeasPageBreak = false;
@@ -4183,48 +4152,54 @@ void ExportMusicXml::write(QIODevice* dev)
                         if (staves > 1)
                               xml.tag("staves", staves);
                         }
+
+                  {
+                  Measure* prevMeasure = m->prevMeasure();
+                  int tick             = m->tick();
+                  Segment* cs1;
+                  Segment* cs2         = m->findSegment(Segment::SegClef, tick);
+                  Segment* seg         = 0;
+
+                  if (prevMeasure)
+                        cs1 = prevMeasure->findSegment(Segment::SegClef,  tick);
+                  else
+                        cs1 = 0;
+
+                  if (cs1 && cs2)         // should not happen
+                        seg = cs2;
+                  else if (cs1)
+                        seg = cs1;
+                  else
+                        seg = cs2;
+
                   // output attribute at start of measure: clef
-                  for (Segment* seg = m->first(); seg; seg = seg->next()) {
+                  if (seg) {
+                        for (int st = strack; st < etrack; st += VOICES) {
+                              // sstaff - xml staff number, counting from 1 for this
+                              // instrument
+                              // special number 0 -> dont show staff number in
+                              // xml output (because there is only one staff)
 
-                        if (seg->tick() > m->tick())
-                              break;
-                        Element* el = seg->element(strack);
-                        if (!el)
-                              continue;
-                        if (el->type() == Element::CLEF)
-                              for (int st = strack; st < etrack; st += VOICES) {
-                                    // sstaff - xml staff number, counting from 1 for this
-                                    // instrument
-                                    // special number 0 -> dont show staff number in
-                                    // xml output (because there is only one staff)
+                              int sstaff = (staves > 1) ? st - strack + VOICES : 0;
+                              sstaff /= VOICES;
 
-                                    int sstaff = (staves > 1) ? st - strack + VOICES : 0;
-                                    sstaff /= VOICES;
-
-                                    el = seg->element(st);
-                                    if (el && el->type() == Element::CLEF) {
-                                          Clef* cle = static_cast<Clef*>(el);
-                                          ClefType ct = cle->clefType();
-                                          int ti = cle->segment()->tick();
-#ifdef DEBUG_CLEF
-                                          qDebug("exportxml: clef at start measure ti=%d ct=%d gen=%d", ti, int(ct), el->generated());
-#endif
-                                          // output only clef changes, not generated clefs at line beginning
-                                          // exception: at tick=0, export clef anyway
-                                          if (ti == 0 || !cle->generated()) {
-#ifdef DEBUG_CLEF
-                                                qDebug("exportxml: clef exported");
-#endif
-                                                clef(sstaff, ct);
-                                                }
-                                          else {
-#ifdef DEBUG_CLEF
-                                                qDebug("exportxml: clef not exported");
-#endif
-                                                }
+                              Clef* cle = static_cast<Clef*>(seg->element(st));
+                              if (cle) {
+                                    ClefType ct = cle->clefType();
+                                    clefDebug("exportxml: clef at start measure ti=%d ct=%d gen=%d", tick, int(ct), cle->generated());
+                                    // output only clef changes, not generated clefs at line beginning
+                                    // exception: at tick=0, export clef anyway
+                                    if (tick == 0 || !cle->generated()) {
+                                          clefDebug("exportxml: clef exported");
+                                          clef(sstaff, ct);
+                                          }
+                                    else {
+                                          clefDebug("exportxml: clef not exported");
                                           }
                                     }
+                              }
                         }
+                  }
 
                   // output attributes with the first actual measure (pickup or regular) only
                   if ((irregularMeasureNo + measureNo + pickupMeasureNo) == 4) {
@@ -4241,8 +4216,8 @@ void ExportMusicXml::write(QIODevice* dev)
                                     else
                                           xml.stag("staff-details");
                                     xml.tag("staff-lines", st->lines());
-                                    if (st->isTabStaff() && instrument->tablature()) {
-                                          QList<int> l = instrument->tablature()->stringList();
+                                    if (st->isTabStaff() && instrument->stringData()) {
+                                          QList<int> l = instrument->stringData()->stringList();
                                           for (int i = 0; i < l.size(); i++) {
                                                 char step  = ' ';
                                                 int alter  = 0;
@@ -4331,23 +4306,19 @@ void ExportMusicXml::write(QIODevice* dev)
                                           // at line beginning
                                           // also ignore clefs at the start of a measure,
                                           // these have already been output
+                                          // also ignore clefs at the end of a measure
+                                          //
                                           ClefType ct = ((Clef*)el)->clefType();
-#ifdef DEBUG_CLEF
                                           int ti = seg->tick();
-                                          qDebug("exportxml: clef in measure ti=%d ct=%d gen=%d", ti, ct, el->generated());
-#endif
+                                          clefDebug("exportxml: clef in measure ti=%d ct=%d gen=%d", ti, ct, el->generated());
                                           if (el->generated()) {
-#ifdef DEBUG_CLEF
-                                                qDebug("exportxml: generated clef not exported");
-#endif
+                                                clefDebug("exportxml: generated clef not exported");
                                                 break;
                                                 }
-                                          if (!el->generated() && seg->tick() != m->tick())
+                                          if (!el->generated() && ti != m->tick() && ti != m->endTick())
                                                 clef(sstaff, ct);
                                           else {
-#ifdef DEBUG_CLEF
-                                                qDebug("exportxml: clef not exported");
-#endif
+                                                clefDebug("exportxml: clef not exported");
                                                 }
                                           }
                                           break;
@@ -4389,7 +4360,7 @@ void ExportMusicXml::write(QIODevice* dev)
                                           break;
 
                                     default:
-                                          qDebug("ExportMusicXml::write unknown segment type %s\n", el->name());
+                                          qDebug("ExportMusicXml::write unknown segment type %s", el->name());
                                           break;
                                     }
                               } // for (Segment* seg = ...

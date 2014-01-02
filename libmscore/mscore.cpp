@@ -25,6 +25,7 @@
 #include "repeat.h"
 #include "jump.h"
 #include "marker.h"
+#include "layoutbreak.h"
 
 namespace Ms {
 
@@ -63,9 +64,9 @@ int     MScore::mtcType;
 
 Sequencer* MScore::seq = 0;
 
-extern void initSymbols(int);
 extern void initStaffTypes();
 extern void initDrumset();
+extern void initScoreFonts();
 
 //---------------------------------------------------------
 //   init
@@ -73,8 +74,6 @@ extern void initDrumset();
 
 void MScore::init()
       {
-      Sym::init();
-
 #ifdef SCRIPT_INTERFACE
       qRegisterMetaType<Element::ElementType>("ElementType");
       qRegisterMetaType<MScore::ValueType>("ValueType");
@@ -84,8 +83,8 @@ void MScore::init()
       qRegisterMetaType<Accidental::AccidentalRole>("AccidentalRole");
       qRegisterMetaType<Accidental::AccidentalType>("AccidentalType");
       qRegisterMetaType<Spanner::Anchor>("Anchor");
-      qRegisterMetaType<Note::NoteHeadGroup>("NoteHeadGroup");
-      qRegisterMetaType<Note::NoteHeadType>("NoteHeadType");
+      qRegisterMetaType<NoteHeadGroup>("NoteHeadGroup");
+      qRegisterMetaType<NoteHeadType>("NoteHeadType");
       qRegisterMetaType<Segment::SegmentType>("SegmentType");
       qRegisterMetaType<FiguredBassItem::Modifier>("Modifier");
       qRegisterMetaType<FiguredBassItem::Parenthesis>("Parenthesis");
@@ -96,6 +95,7 @@ void MScore::init()
       qRegisterMetaType<JumpType>("JumpType");
       qRegisterMetaType<MarkerType>("MarkerType");
       qRegisterMetaType<BeamMode>("BeamMode");
+      qRegisterMetaType<LayoutBreak::LayoutBreakType>("LayoutBreakType");
 #endif
 
       DPMM = DPI / INCH;       // dots/mm
@@ -108,6 +108,7 @@ void MScore::init()
       extern QString resourcePath();
       _globalShare = resourcePath();
       }
+
 #elif defined(Q_OS_MAC)
       QDir dir(QCoreApplication::applicationDirPath() + QString("/../Resources"));
       _globalShare = dir.absolutePath() + "/";
@@ -115,14 +116,13 @@ void MScore::init()
       _globalShare = QString( INSTPREFIX "/share/" INSTALL_NAME);
 #endif
 
-      selectColor[0].setNamedColor("#2456aa");     //blue
-      selectColor[1].setNamedColor("#1a8239");     //green
-      selectColor[2].setNamedColor("#d79112");  //yellow
+      selectColor[0].setNamedColor("#2456aa");   //blue
+      selectColor[1].setNamedColor("#1a8239");   //green
+      selectColor[2].setNamedColor("#d79112");   //yellow
       selectColor[3].setNamedColor("#75112b");   //purple
 
       defaultColor        = Qt::black;
       dropColor           = Qt::red;
-      nudgeStep           = .1;       // in spatium units (default 0.1)
       defaultPlayDuration = 300;      // ms
       warnPitchRange      = true;
       replaceFractions    = true;
@@ -149,15 +149,12 @@ void MScore::init()
       //
 #if !defined(Q_OS_MAC) && !defined(Q_OS_IOS)
       static const char* fonts[] = {
-            "mscore-20.ttf",
             "MuseJazz.ttf",
             "FreeSans.ttf",
             "FreeSerifMscore.ttf",
             "FreeSerifBold.ttf",
-            "gonville-20.ttf",
             "mscoreTab.ttf",
             "mscore-BC.ttf",
-            "Bravura.otf"
             };
 
       for (unsigned i = 0; i < sizeof(fonts)/sizeof(*fonts); ++i) {
@@ -169,8 +166,8 @@ void MScore::init()
                   }
             }
 #endif
+      initScoreFonts();
       StaffTypeTablature::readConfigFile(0);          // get TAB font config, before initStaffTypes()
-      initSymbols(0);   // init emmentaler symbols
       initStaffTypes();
       initDrumset();
       FiguredBass::readConfigFile(0);

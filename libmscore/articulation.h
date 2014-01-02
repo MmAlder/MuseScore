@@ -14,14 +14,14 @@
 #define __ARTICULATION_H__
 
 #include "mscore.h"
-#include "symbol.h"
-#include "sym.h"
+#include "element.h"
 
 class QPainter;
 
 namespace Ms {
 
 class ChordRest;
+enum class SymId;
 
 //---------------------------------------------------------
 //   ArticulationInfo
@@ -29,9 +29,9 @@ class ChordRest;
 //---------------------------------------------------------
 
 enum ArticulationAnchor {
-      A_TOP_STAFF,
-      A_BOTTOM_STAFF,
-      A_CHORD,          // anchor depends on chord direction
+      A_TOP_STAFF,      // anchor is always placed at top of staff
+      A_BOTTOM_STAFF,   // anchor is always placed at bottom of staff
+      A_CHORD,          // anchor depends on chord direction, away from stem
       A_TOP_CHORD,      // attribute is alway placed at top of chord
       A_BOTTOM_CHORD,   // attribute is placed at bottom of chord
       };

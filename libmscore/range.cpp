@@ -387,13 +387,13 @@ bool TrackList::write(int track, Measure* measure) const
                                           qDebug("Tracklist::write: premature end of measure list in track %d, rest %d/%d",
                                              track, duration.numerator(), duration.denominator());
                                           ++i;
-                                          printf("%d elements missing\n", n-i);
+                                          qDebug("%d elements missing", n-i);
                                           for (; i < n; ++i) {
                                                 Element* e = at(i);
-                                                printf("    <%s>\n", e->name());
+                                                qDebug("    <%s>", e->name());
                                                 if (e->isChordRest()) {
                                                       ChordRest* cr = static_cast<ChordRest*>(e);
-                                                      printf("       %d/%d\n",
+                                                      qDebug("       %d/%d",
                                                          cr->duration().numerator(),
                                                          cr->duration().denominator());
                                                       }
@@ -406,15 +406,17 @@ bool TrackList::write(int track, Measure* measure) const
                               }
                         }
                   }
-            else if (e->type() == Element::KEYSIG) {
-                  // keysig has to be at start of measure
-                  }
+//            else if (e->type() == Element::KEYSIG) {
+//                  // keysig has to be at start of measure
+//                  }
             else if (e->type() == Element::BAR_LINE)
                   ;
             else {
-                  if (m == 0)
+                  if (m == nullptr)
                         break;
-                  segment = m->getSegment(e, m->tick() + pos.ticks());
+                  // add the element in its own segment;
+                  // but KeySig has to be at start of (current) measure
+                  segment = m->getSegment(e, m->tick() + e->type() == Element::KEYSIG ? 0 : pos.ticks());
                   Element* ne = e->clone();
                   ne->setScore(score);
                   ne->setTrack(track);
@@ -484,6 +486,7 @@ void ScoreRange::read(Segment* first, Segment* last, int startTrack, int endTrac
                s->track() >= startTrack && s->track() < endTrack) {
                   Spanner* ns = static_cast<Spanner*>(s->clone());
                   ns->setTick(ns->tick() - first->tick());
+                  ns->setTick2(ns->tick2() - first->tick());
                   spanner.push_back(ns);
                   }
             }
@@ -509,6 +512,7 @@ bool ScoreRange::write(int track, Measure* m) const
       Score* score = m->score();
       for (Spanner* s : spanner) {
             s->setTick(s->tick() + m->tick());
+            s->setTick2(s->tick2() + m->tick());
             score->undoAddElement(s);
             }
       for (const Annotation& a : annotations) {

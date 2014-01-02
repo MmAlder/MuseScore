@@ -36,30 +36,38 @@ void MidiImportOperations::setCurrentMidiFile(const QString &fileName)
 TrackOperations MidiImportOperations::currentTrackOperations() const
       {
       if (!isValidIndex(currentTrack_))
-            return TrackOperations();
+            return defaultOpers;
       return operations_[currentTrack_];
       }
 
 TrackOperations MidiImportOperations::trackOperations(int trackIndex) const
       {
       if (!isValidIndex(trackIndex))
-            return TrackOperations();
+            return defaultOpers;
       return operations_[trackIndex];
       }
 
-void MidiImportOperations::adaptForPercussion(int trackIndex)
+QString MidiImportOperations::charset() const
       {
-                  // small hack: don't use multiple voices for tuplets
-      if (isValidIndex(trackIndex))
-            operations_[trackIndex].useMultipleVoices = false;
+      return midiData_.charset(currentMidiFile_);
       }
 
-void MidiImportOperations::addTrackLyrics(const std::multimap<ReducedFraction, QString> &trackLyrics)
+void MidiImportOperations::adaptForPercussion(int trackIndex, bool isDrumTrack)
+      {
+                  // small hack: don't use multiple voices for tuplets in percussion tracks
+      if (isValidIndex(trackIndex))
+            operations_[trackIndex].useMultipleVoices = !isDrumTrack;
+      else
+            defaultOpers.useMultipleVoices = isDrumTrack
+                        ? false : TrackOperations().useMultipleVoices;
+      }
+
+void MidiImportOperations::addTrackLyrics(const std::multimap<ReducedFraction, std::string> &trackLyrics)
       {
       midiData_.addTrackLyrics(currentMidiFile_, trackLyrics);
       }
 
-const QList<std::multimap<ReducedFraction, QString>>*
+const QList<std::multimap<ReducedFraction, std::string>>*
 MidiImportOperations::getLyrics()
       {
       return midiData_.getLyrics(currentMidiFile_);

@@ -22,6 +22,7 @@ namespace Ms {
 
 class Sym;
 class Segment;
+enum class SymId;
 
 //---------------------------------------------------------
 //   KeySym
@@ -29,7 +30,7 @@ class Segment;
 //---------------------------------------------------------
 
 struct KeySym {
-      int sym;
+      SymId sym;
       QPointF spos;
       QPointF pos;
       };
@@ -51,7 +52,7 @@ class KeySig : public Element {
       bool	_showNaturals;
       QList<KeySym*> keySymbols;
       KeySigEvent _sig;
-      void addLayout(int sym, qreal x, int y);
+      void addLayout(SymId sym, qreal x, int y);
 
    public:
       KeySig(Score* = 0);
@@ -64,7 +65,7 @@ class KeySig : public Element {
       virtual void layout();
       virtual qreal mag() const;
 
-      void setSig(int oldSig, int newSig);
+      Q_INVOKABLE void setSig(int oldSig, int newSig);
       void setOldSig(int oldSig);
 
       Segment* segment() const            { return (Segment*)parent(); }

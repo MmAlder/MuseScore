@@ -1022,7 +1022,7 @@ p, li { white-space: pre-wrap; }
             <text>testpart2</text>
             </Text>
           <Text>
-            <style>InstrumentsExcerpt</style>
+            <style>Instrument Name (Part)</style>
             <text>Alto</text>
             </Text>
           </VBox>
@@ -1043,7 +1043,6 @@ p, li { white-space: pre-wrap; }
             </Rest>
           </Measure>
         <Measure number="2">
-          <breakMultiMeasureRest/>
           <Tempo>
             <tempo>1.66667</tempo>
             <style>Tempo</style>
@@ -1573,7 +1572,7 @@ p, li { white-space: pre-wrap; }
             <text>testpart2</text>
             </Text>
           <Text>
-            <style>InstrumentsExcerpt</style>
+            <style>Instrument Name (Part)</style>
             <text>Tenor</text>
             </Text>
           </VBox>
@@ -1594,7 +1593,6 @@ p, li { white-space: pre-wrap; }
             </Rest>
           </Measure>
         <Measure number="2">
-          <breakMultiMeasureRest/>
           <Tempo>
             <tempo>1.66667</tempo>
             <style>Tempo</style>

@@ -20,8 +20,9 @@
 #include "instrtemplate.h"
 #include "text.h"
 #include "measure.h"
-#include "tablature.h"
+#include "stringdata.h"
 #include "stafftype.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -376,6 +377,23 @@ void Part::setProperty(int id, const QVariant& property)
       score()->setLayoutAll(true);
       }
 
+//---------------------------------------------------------
+//   startTrack
+//---------------------------------------------------------
+
+int Part::startTrack() const
+      {
+      return _staves.front()->idx() * VOICES;
+      }
+
+//---------------------------------------------------------
+//   endTrack
+//---------------------------------------------------------
+
+int Part::endTrack() const
+      {
+      return _staves.back()->idx() * VOICES + VOICES;
+      }
 
 }
 

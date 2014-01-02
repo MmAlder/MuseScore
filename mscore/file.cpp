@@ -168,7 +168,7 @@ static bool readScoreError(const QString& name, Score::FileError error, bool ask
                   msg += QT_TRANSLATE_NOOP(file, "bad format");
                   break;
             case Score::FILE_UNKNOWN_TYPE:
-                  msg += QT_TRANSLATE_NOOP(file, "unknown format");
+                  msg += QT_TRANSLATE_NOOP(file, "unknown type");
                   break;
             case Score::FILE_NO_ROOTFILE:
                   break;
@@ -194,6 +194,10 @@ static bool readScoreError(const QString& name, Score::FileError error, bool ask
                   break;
             }
       int rv = false;
+      if (converterMode) {
+            fprintf(stderr, "%s\n", qPrintable(msg));
+            return rv;
+            }
       if (canIgnore && ask)  {
             QMessageBox msgBox;
             msgBox.setWindowTitle(QT_TRANSLATE_NOOP(file, "MuseScore: Load error"));
@@ -308,7 +312,7 @@ Score* MuseScore::readScore(const QString& name)
       if (name.isEmpty())
             return 0;
 
-      Score* score = new Score(MScore::defaultStyle());
+      Score* score = new Score(MScore::baseStyle());  // start with built-in style
       setMidiPrefOperations(name);
       Score::FileError rv = Ms::readScore(score, name, false);
       if (rv == Score::FILE_TOO_OLD || rv == Score::FILE_TOO_NEW) {
@@ -937,7 +941,7 @@ QString MuseScore::getStyleFilename(bool open, const QString& title)
 
 QString MuseScore::getChordStyleFilename(bool open)
       {
-      QString filter = tr("MuseScore Chord Style File (*.xml)");
+      QString filter = tr("Chord Symbols Style File (*.xml)");
       if (open)
             filter.append(tr(";;All Files (*)"));
 
@@ -950,14 +954,14 @@ QString MuseScore::getChordStyleFilename(bool open)
             QString fn;
             if (open) {
                   fn = QFileDialog::getOpenFileName(
-                     this, tr("MuseScore: Load Chord Style"),
+                     this, tr("MuseScore: Load Chord Symbols Style"),
                      defaultPath,
                      filter
                      );
                   }
             else {
                   fn = QFileDialog::getSaveFileName(
-                     this, tr("MuseScore: Save Chord Style"),
+                     this, tr("MuseScore: Save Chord Symbols Style"),
                      defaultPath,
                      filter
                      );
@@ -978,7 +982,7 @@ QString MuseScore::getChordStyleFilename(bool open)
                   loadChordStyleDialog = new QFileDialog(this);
                   loadChordStyleDialog->setFileMode(QFileDialog::ExistingFile);
                   loadChordStyleDialog->setOption(QFileDialog::DontUseNativeDialog, true);
-                  loadChordStyleDialog->setWindowTitle(tr("MuseScore: Load Chord Style"));
+                  loadChordStyleDialog->setWindowTitle(tr("MuseScore: Load Chord Symbols Style"));
                   loadChordStyleDialog->setNameFilter(filter);
                   loadChordStyleDialog->setDirectory(defaultPath);
 
@@ -1067,7 +1071,7 @@ QString MuseScore::getScanFile(const QString& d)
 
 QString MuseScore::getAudioFile(const QString& d)
       {
-      QString filter = tr("OGG Audio File (*.ogg);;All (*)");
+      QString filter = tr("Ogg Audio File (*.ogg);;All (*)");
       QString defaultPath = d.isEmpty() ? QDir::homePath() : d;
       if (preferences.nativeDialogs) {
             QString s = QFileDialog::getOpenFileName(
@@ -1083,7 +1087,7 @@ QString MuseScore::getAudioFile(const QString& d)
             loadAudioDialog = new QFileDialog(this);
             loadAudioDialog->setFileMode(QFileDialog::ExistingFile);
             loadAudioDialog->setOption(QFileDialog::DontUseNativeDialog, true);
-            loadAudioDialog->setWindowTitle(tr("MuseScore: Choose OGG Audio File"));
+            loadAudioDialog->setWindowTitle(tr("MuseScore: Choose Ogg Audio File"));
             loadAudioDialog->setNameFilter(filter);
             loadAudioDialog->setDirectory(defaultPath);
 
@@ -1486,7 +1490,7 @@ bool MuseScore::exportFile()
       fl.append(tr("Scalable Vector Graphic (*.svg)"));
 #ifdef HAS_AUDIOFILE
       fl.append(tr("Wave Audio (*.wav)"));
-      fl.append(tr("Flac Audio (*.flac)"));
+      fl.append(tr("FLAC Audio (*.flac)"));
       fl.append(tr("Ogg Vorbis Audio (*.ogg)"));
 #endif
       fl.append(tr("MP3 Audio (*.mp3)"));
@@ -1539,7 +1543,7 @@ bool MuseScore::exportParts()
       fl.append(tr("Scalable Vector Graphic (*.svg)"));
 #ifdef HAS_AUDIOFILE
       fl.append(tr("Wave Audio (*.wav)"));
-      fl.append(tr("Flac Audio (*.flac)"));
+      fl.append(tr("FLAC Audio (*.flac)"));
       fl.append(tr("Ogg Vorbis Audio (*.ogg)"));
 #endif
       fl.append(tr("MP3 Audio (*.mp3)"));
@@ -1984,13 +1988,12 @@ void MuseScore::addImage(Score* score, Element* e)
       {
       QString fn = QFileDialog::getOpenFileName(
          0,
-         tr("MuseScore: InsertImage"),
+         tr("MuseScore: Insert Image"),
          "",            // lastOpenPath,
-         tr("All Supported Files (*.svg *.jpg *.png *.xpm);;"
+         tr("All Supported Files (*.svg *.jpg *.jpeg *.png);;"
             "Scalable vector graphics (*.svg);;"
-            "JPEG (*.jpg);;"
+            "JPEG (*.jpg *.jpeg);;"
             "PNG (*.png);;"
-            "XPM (*.xpm);;"
             "All Files (*)"
             )
          );
@@ -2003,7 +2006,7 @@ void MuseScore::addImage(Score* score, Element* e)
 
       if (suffix == "svg")
             s->setImageType(IMAGE_SVG);
-      else if (suffix == "jpg" || suffix == "png" || suffix == "xpm")
+      else if (suffix == "jpg" || suffix == "jpeg" || suffix == "png")
             s->setImageType(IMAGE_RASTER);
       else
             return;
@@ -2085,7 +2088,7 @@ bool MuseScore::savePng(Score* score, const QString& name, bool screenshot, bool
             if (fileName.endsWith(".png"))
                   fileName = fileName.left(fileName.size() - 4);
             fileName += QString("-%1.png").arg(pageNumber+1, padding, 10, QLatin1Char('0'));
-            if(!converterMode) {
+            if (!converterMode) {
                   QFileInfo fip(fileName);
                   if(fip.exists() && !overwrite) {
                         if(noToAll)
@@ -2159,7 +2162,7 @@ void WallpaperPreview::setImage(const QString& path)
 
 QString MuseScore::getWallpaper(const QString& caption)
       {
-      QString filter = tr("Images (*.jpg *.gif *.png);;All (*)");
+      QString filter = tr("Images (*.jpg *.jpeg *.png);;All (*)");
       QString d = mscoreGlobalShare + "/wallpaper";
 
       if (preferences.nativeDialogs) {

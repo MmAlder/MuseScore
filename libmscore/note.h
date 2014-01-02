@@ -22,6 +22,7 @@
 #include "symbol.h"
 #include "durationtype.h"
 #include "noteevent.h"
+#include "pitchspelling.h"
 
 class QPainter;
 
@@ -40,6 +41,40 @@ class Accidental;
 class NoteDot;
 class Spanner;
 class StaffTypeTablature;
+enum class SymId;
+
+//---------------------------------------------------------
+//   NoteHeadGroup
+//---------------------------------------------------------
+
+enum class NoteHeadGroup {
+      HEAD_NORMAL = 0,
+      HEAD_CROSS,
+      HEAD_DIAMOND,
+      HEAD_TRIANGLE,
+      HEAD_MI,
+      HEAD_SLASH,
+      HEAD_XCIRCLE,
+      HEAD_DO,
+      HEAD_RE,
+      HEAD_FA,
+      HEAD_LA,
+      HEAD_TI,
+      HEAD_SOL,
+      HEAD_BREVIS_ALT,
+      HEAD_GROUPS,
+      HEAD_INVALID = -1
+      };
+
+//---------------------------------------------------------
+//   NoteHeadType
+//---------------------------------------------------------
+
+enum class NoteHeadType {
+      HEAD_AUTO = -1, HEAD_WHOLE = 0, HEAD_HALF = 1, HEAD_QUARTER = 2,
+      HEAD_BREVIS = 3,
+      HEAD_TYPES
+      };
 
 //---------------------------------------------------------
 //   NoteVal
@@ -47,12 +82,14 @@ class StaffTypeTablature;
 //---------------------------------------------------------
 
 struct NoteVal {
-      int pitch;
-      int tpc;
-      int fret;
-      int string;
-      int headGroup;
-      NoteVal();
+      int pitch = -1;
+      int tpc = INVALID_TPC;
+      int fret = FRET_NONE;
+      int string = STRING_NONE;
+      NoteHeadGroup headGroup = NoteHeadGroup::HEAD_NORMAL;
+
+      NoteVal() {}
+      NoteVal(int p) : pitch(p) {}
       };
 
 //---------------------------------------------------------
@@ -67,7 +104,10 @@ class NoteHead : public Symbol {
       NoteHead &operator=(const NoteHead&);
       virtual NoteHead* clone() const  { return new NoteHead(*this); }
       virtual ElementType type() const { return NOTEHEAD; }
+
       virtual void write(Xml& xml) const;
+
+      NoteHeadGroup headGroup() const;
       };
 
 //---------------------------------------------------------------------------------------
@@ -97,19 +137,6 @@ class NoteHead : public Symbol {
 //---------------------------------------------------------------------------------------
 
 class Note : public Element {
-   public:
-      enum NoteHeadGroup {
-            HEAD_NORMAL = 0, HEAD_CROSS, HEAD_DIAMOND, HEAD_TRIANGLE, HEAD_MI,
-            HEAD_SLASH, HEAD_XCIRCLE, HEAD_DO, HEAD_RE, HEAD_FA, HEAD_LA, HEAD_TI,
-            HEAD_SOL,
-            HEAD_BREVIS_ALT,
-            HEAD_GROUPS,
-            HEAD_INVALID = -1
-            };
-      enum NoteHeadType { HEAD_AUTO = -1, HEAD_WHOLE = 0, HEAD_HALF = 1, HEAD_QUARTER = 2,
-            HEAD_BREVIS = 3 };
-
-   private:
       Q_OBJECT
       Q_PROPERTY(int subchannel                READ subchannel)
       Q_PROPERTY(int line                      READ line)
@@ -180,7 +207,7 @@ class Note : public Element {
       QList<Spanner*> _spannerFor;
       QList<Spanner*> _spannerBack;
 
-      virtual QRectF drag(const EditData& s);
+      virtual QRectF drag(EditData*) override;
       void endDrag();
       void endEdit();
       void addSpanner(Spanner*);
@@ -212,7 +239,7 @@ class Note : public Element {
       qreal tabHeadHeight(StaffTypeTablature* tab = 0) const;
       QPointF attach() const;
 
-      int noteHead() const;
+      SymId noteHead() const;
       NoteHeadGroup headGroup() const     { return _headGroup; }
       NoteHeadType headType() const       { return _headType;  }
       void setHeadGroup(NoteHeadGroup val);
@@ -346,16 +373,17 @@ class Note : public Element {
       bool mark() const               { return _mark;   }
       void setMark(bool v) const      { _mark = v;   }
       virtual void setScore(Score* s);
+
+      static SymId noteHead(int direction, NoteHeadGroup, NoteHeadType);
       };
 
-extern Sym* noteHeadSym(bool up, int group, int n);
-extern const SymId noteHeads[2][Note::HEAD_GROUPS][HEAD_TYPES];
+// extern const SymId noteHeads[2][int(NoteHeadGroup::HEAD_GROUPS)][int(NoteHeadType::HEAD_TYPES)];
 
 
 }     // namespace Ms
 
-Q_DECLARE_METATYPE(Ms::Note::NoteHeadGroup)
-Q_DECLARE_METATYPE(Ms::Note::NoteHeadType)
+Q_DECLARE_METATYPE(Ms::NoteHeadGroup)
+Q_DECLARE_METATYPE(Ms::NoteHeadType)
 
 #endif
 

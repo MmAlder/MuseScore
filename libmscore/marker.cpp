@@ -12,6 +12,7 @@
 
 #include "marker.h"
 #include "score.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -34,29 +35,30 @@ Marker::Marker(Score* s)
 void Marker::setMarkerType(MarkerType t)
       {
       _markerType = t;
+      ScoreFont* f = score()->scoreFont();
       switch(t) {
             case MarkerType::SEGNO:
-                  setText(symbols[score()->symIdx()][segnoSym].toString());
+                  setText(f->toString(SymId::segno));
                   setLabel("segno");
                   break;
 
             case MarkerType::VARSEGNO:
-                  setText(symbols[score()->symIdx()][varsegnoSym].toString());
+                  setText(f->toString(SymId::segno));       // TODO-smufl
                   setLabel("varsegno");
                   break;
 
             case MarkerType::CODA:
-                  setText(symbols[score()->symIdx()][codaSym].toString());
+                  setText(f->toString(SymId::coda));
                   setLabel("codab");
                   break;
 
             case MarkerType::VARCODA:
-                  setText(symbols[score()->symIdx()][varcodaSym].toString());
+                  setText(f->toString(SymId::codaSquare));
                   setLabel("varcoda");
                   break;
 
             case MarkerType::CODETTA:
-                  setText(symbols[score()->symIdx()][codaSym].toString());
+                  setText(f->toString(SymId::codaSquare));  // TODO-smufl
                   setLabel("codetta");
                   break;
 

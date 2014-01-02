@@ -82,6 +82,7 @@
 #include "jump.h"
 #include "noteline.h"
 #include "bagpembell.h"
+#include "ambitus.h"
 
 namespace Ms {
 
@@ -90,96 +91,97 @@ namespace Ms {
 //
 // list has to be synchronized with ElementType enum
 //
-static const char* elementNames[] = {
-      QT_TRANSLATE_NOOP("elementName", "invalid"),
-      QT_TRANSLATE_NOOP("elementName", "Symbol"),
-      QT_TRANSLATE_NOOP("elementName", "Text"),
-      QT_TRANSLATE_NOOP("elementName", "InstrumentName"),
-      QT_TRANSLATE_NOOP("elementName", "SlurSegment"),
-      QT_TRANSLATE_NOOP("elementName", "StaffLines"),
-      QT_TRANSLATE_NOOP("elementName", "BarLine"),
-      QT_TRANSLATE_NOOP("elementName", "StemSlash"),
-      QT_TRANSLATE_NOOP("elementName", "Line"),
-      QT_TRANSLATE_NOOP("elementName", "Bracket"),
+static const ElementName elementNames[] = {
+      ElementName("invalid",              QT_TRANSLATE_NOOP("elementName", "invalid")),
+      ElementName("Symbol",               QT_TRANSLATE_NOOP("elementName", "Symbol")),
+      ElementName("Text",                 QT_TRANSLATE_NOOP("elementName", "Text")),
+      ElementName("InstrumentName",       QT_TRANSLATE_NOOP("elementName", "Instrument Name")),
+      ElementName("SlurSegment",          QT_TRANSLATE_NOOP("elementName", "Slur Segment")),
+      ElementName("StaffLines",           QT_TRANSLATE_NOOP("elementName", "Staff Lines")),
+      ElementName("BarLine",              QT_TRANSLATE_NOOP("elementName", "Bar Line")),
+      ElementName("StemSlash",            QT_TRANSLATE_NOOP("elementName", "Stem Slash")),
+      ElementName("Line",                 QT_TRANSLATE_NOOP("elementName", "Line")),
+      ElementName("Bracket",              QT_TRANSLATE_NOOP("elementName", "Bracket")),
 
-      QT_TRANSLATE_NOOP("elementName", "Arpeggio"),
-      QT_TRANSLATE_NOOP("elementName", "Accidental"),
-      QT_TRANSLATE_NOOP("elementName", "Stem"),
-      QT_TRANSLATE_NOOP("elementName", "Note"),
-      QT_TRANSLATE_NOOP("elementName", "Clef"),
-      QT_TRANSLATE_NOOP("elementName", "KeySig"),
-      QT_TRANSLATE_NOOP("elementName", "TimeSig"),
-      QT_TRANSLATE_NOOP("elementName", "Rest"),
-      QT_TRANSLATE_NOOP("elementName", "Breath"),
-      QT_TRANSLATE_NOOP("elementName", "Glissando"),
-      QT_TRANSLATE_NOOP("elementName", "RepeatMeasure"),
-      QT_TRANSLATE_NOOP("elementName", "Image"),
-      QT_TRANSLATE_NOOP("elementName", "Tie"),
-      QT_TRANSLATE_NOOP("elementName", "Articulation"),
-      QT_TRANSLATE_NOOP("elementName", "ChordLine"),
-      QT_TRANSLATE_NOOP("elementName", "Dynamic"),
-      QT_TRANSLATE_NOOP("elementName", "Beam"),
-      QT_TRANSLATE_NOOP("elementName", "Hook"),
-      QT_TRANSLATE_NOOP("elementName", "Lyrics"),
-      QT_TRANSLATE_NOOP("elementName", "FiguredBass"),
-      QT_TRANSLATE_NOOP("elementName", "Marker"),
-      QT_TRANSLATE_NOOP("elementName", "Jump"),
-      QT_TRANSLATE_NOOP("elementName", "Fingering"),
-      QT_TRANSLATE_NOOP("elementName", "Tuplet"),
-      QT_TRANSLATE_NOOP("elementName", "Tempo"),
-      QT_TRANSLATE_NOOP("elementName", "StaffText"),
-      QT_TRANSLATE_NOOP("elementName", "RehearsalMark"),
-      QT_TRANSLATE_NOOP("elementName", "InstrumentChange"),
-      QT_TRANSLATE_NOOP("elementName", "Harmony"),
-      QT_TRANSLATE_NOOP("elementName", "FretDiagram"),
-      QT_TRANSLATE_NOOP("elementName", "Bend"),
-      QT_TRANSLATE_NOOP("elementName", "TremoloBar"),
-      QT_TRANSLATE_NOOP("elementName", "Volta"),
-      QT_TRANSLATE_NOOP("elementName", "HairpinSegment"),
-      QT_TRANSLATE_NOOP("elementName", "OttavaSegment"),
-      QT_TRANSLATE_NOOP("elementName", "TrillSegment"),
-      QT_TRANSLATE_NOOP("elementName", "TextLineSegment"),
-      QT_TRANSLATE_NOOP("elementName", "VoltaSegment"),
-      QT_TRANSLATE_NOOP("elementName", "PedalSegment"),
-      QT_TRANSLATE_NOOP("elementName", "LayoutBreak"),
-      QT_TRANSLATE_NOOP("elementName", "Spacer"),
-      QT_TRANSLATE_NOOP("elementName", "StaffState"),
-      QT_TRANSLATE_NOOP("elementName", "LedgerLine"),
-      QT_TRANSLATE_NOOP("elementName", "NoteHead"),
-      QT_TRANSLATE_NOOP("elementName", "NoteDot"),
-      QT_TRANSLATE_NOOP("elementName", "Tremolo"),
-      QT_TRANSLATE_NOOP("elementName", "Measure"),
-      QT_TRANSLATE_NOOP("elementName", "Selection"),
-      QT_TRANSLATE_NOOP("elementName", "Lasso"),
-      QT_TRANSLATE_NOOP("elementName", "ShadowNote"),
-      QT_TRANSLATE_NOOP("elementName", "RubberBand"),
-      QT_TRANSLATE_NOOP("elementName", "TabDurationSymbol"),
-      QT_TRANSLATE_NOOP("elementName", "FSymbol"),
-      QT_TRANSLATE_NOOP("elementName", "Page"),
-      QT_TRANSLATE_NOOP("elementName", "HairPin"),
-      QT_TRANSLATE_NOOP("elementName", "Ottava"),
-      QT_TRANSLATE_NOOP("elementName", "Pedal"),
-      QT_TRANSLATE_NOOP("elementName", "Trill"),
-      QT_TRANSLATE_NOOP("elementName", "TextLine"),
-      QT_TRANSLATE_NOOP("elementName", "NoteLine"),
-      QT_TRANSLATE_NOOP("elementName", "Segment"),
-      QT_TRANSLATE_NOOP("elementName", "System"),
-      QT_TRANSLATE_NOOP("elementName", "Compound"),
-      QT_TRANSLATE_NOOP("elementName", "Chord"),
-      QT_TRANSLATE_NOOP("elementName", "Slur"),
-      QT_TRANSLATE_NOOP("elementName", "Element"),
-      QT_TRANSLATE_NOOP("elementName", "ElementList"),
-      QT_TRANSLATE_NOOP("elementName", "StaffList"),
-      QT_TRANSLATE_NOOP("elementName", "MeasureList"),
-      QT_TRANSLATE_NOOP("elementName", "Layout"),
-      QT_TRANSLATE_NOOP("elementName", "HBox"),
-      QT_TRANSLATE_NOOP("elementName", "VBox"),
-      QT_TRANSLATE_NOOP("elementName", "TBox"),
-      QT_TRANSLATE_NOOP("elementName", "FBox"),
-      QT_TRANSLATE_NOOP("elementName", "AccidentalBracket"),
-      QT_TRANSLATE_NOOP("elementName", "Icon"),
-      QT_TRANSLATE_NOOP("elementName", "Ossia"),
-      QT_TRANSLATE_NOOP("elementName", "BagpipeEmbellishment")
+      ElementName("Arpeggio",             QT_TRANSLATE_NOOP("elementName", "Arpeggio")),
+      ElementName("Accidental",           QT_TRANSLATE_NOOP("elementName", "Accidental")),
+      ElementName("Stem",                 QT_TRANSLATE_NOOP("elementName", "Stem")),
+      ElementName("Note",                 QT_TRANSLATE_NOOP("elementName", "Note")),
+      ElementName("Clef",                 QT_TRANSLATE_NOOP("elementName", "Clef")),
+      ElementName("KeySig",               QT_TRANSLATE_NOOP("elementName", "Key Signature")),
+      ElementName("Ambitus",              QT_TRANSLATE_NOOP("elementName", "Ambitus")),
+      ElementName("TimeSig",              QT_TRANSLATE_NOOP("elementName", "Time Signature")),
+      ElementName("Rest",                 QT_TRANSLATE_NOOP("elementName", "Rest")),
+      ElementName("Breath",               QT_TRANSLATE_NOOP("elementName", "Breath")),
+      ElementName("Glissando",            QT_TRANSLATE_NOOP("elementName", "Glissando")),
+      ElementName("RepeatMeasure",        QT_TRANSLATE_NOOP("elementName", "Repeat Measure")),
+      ElementName("Image",                QT_TRANSLATE_NOOP("elementName", "Image")),
+      ElementName("Tie",                  QT_TRANSLATE_NOOP("elementName", "Tie")),
+      ElementName("Articulation",         QT_TRANSLATE_NOOP("elementName", "Articulation")),
+      ElementName("ChordLine",            QT_TRANSLATE_NOOP("elementName", "Chord Line")),
+      ElementName("Dynamic",              QT_TRANSLATE_NOOP("elementName", "Dynamic")),
+      ElementName("Beam",                 QT_TRANSLATE_NOOP("elementName", "Beam")),
+      ElementName("Hook",                 QT_TRANSLATE_NOOP("elementName", "Hook")),
+      ElementName("Lyrics",               QT_TRANSLATE_NOOP("elementName", "Lyrics")),
+      ElementName("FiguredBass",          QT_TRANSLATE_NOOP("elementName", "Figured Bass")),
+      ElementName("Marker",               QT_TRANSLATE_NOOP("elementName", "Marker")),
+      ElementName("Jump",                 QT_TRANSLATE_NOOP("elementName", "Jump")),
+      ElementName("Fingering",            QT_TRANSLATE_NOOP("elementName", "Fingering")),
+      ElementName("Tuplet",               QT_TRANSLATE_NOOP("elementName", "Tuplet")),
+      ElementName("Tempo",                QT_TRANSLATE_NOOP("elementName", "Tempo")),
+      ElementName("StaffText",            QT_TRANSLATE_NOOP("elementName", "Staff Text")),
+      ElementName("RehearsalMark",        QT_TRANSLATE_NOOP("elementName", "Rehearsal Mark")),
+      ElementName("InstrumentChange",     QT_TRANSLATE_NOOP("elementName", "Instrument Change")),
+      ElementName("Harmony",              QT_TRANSLATE_NOOP("elementName", "Chord Symbol")),
+      ElementName("FretDiagram",          QT_TRANSLATE_NOOP("elementName", "Fretboard Diagram")),
+      ElementName("Bend",                 QT_TRANSLATE_NOOP("elementName", "Bend")),
+      ElementName("TremoloBar",           QT_TRANSLATE_NOOP("elementName", "TremoloBar")),
+      ElementName("Volta",                QT_TRANSLATE_NOOP("elementName", "Volta")),
+      ElementName("HairpinSegment",       QT_TRANSLATE_NOOP("elementName", "Hairpin Segment")),
+      ElementName("OttavaSegment",        QT_TRANSLATE_NOOP("elementName", "Ottava Segment")),
+      ElementName("TrillSegment",         QT_TRANSLATE_NOOP("elementName", "Trill Segment")),
+      ElementName("TextLineSegment",      QT_TRANSLATE_NOOP("elementName", "Text Line Segment")),
+      ElementName("VoltaSegment",         QT_TRANSLATE_NOOP("elementName", "Volta Segment")),
+      ElementName("PedalSegment",         QT_TRANSLATE_NOOP("elementName", "Pedal Segment")),
+      ElementName("LayoutBreak",          QT_TRANSLATE_NOOP("elementName", "Layout Break")),
+      ElementName("Spacer",               QT_TRANSLATE_NOOP("elementName", "Spacer")),
+      ElementName("StaffState",           QT_TRANSLATE_NOOP("elementName", "Staff State")),
+      ElementName("LedgerLine",           QT_TRANSLATE_NOOP("elementName", "Ledger Line")),
+      ElementName("NoteHead",             QT_TRANSLATE_NOOP("elementName", "Note Head")),
+      ElementName("NoteDot",              QT_TRANSLATE_NOOP("elementName", "Note Dot")),
+      ElementName("Tremolo",              QT_TRANSLATE_NOOP("elementName", "Tremolo")),
+      ElementName("Measure",              QT_TRANSLATE_NOOP("elementName", "Measure")),
+      ElementName("Selection",            QT_TRANSLATE_NOOP("elementName", "Selection")),
+      ElementName("Lasso",                QT_TRANSLATE_NOOP("elementName", "Lasso")),
+      ElementName("ShadowNote",           QT_TRANSLATE_NOOP("elementName", "Shadow Note")),
+      ElementName("RubberBand",           QT_TRANSLATE_NOOP("elementName", "Rubber Band")),
+      ElementName("TabDurationSymbol",    QT_TRANSLATE_NOOP("elementName", "Tab Duration Symbol")),
+      ElementName("FSymbol",              QT_TRANSLATE_NOOP("elementName", "Font Symbol")),
+      ElementName("Page",                 QT_TRANSLATE_NOOP("elementName", "Page")),
+      ElementName("HairPin",              QT_TRANSLATE_NOOP("elementName", "Hairpin")),
+      ElementName("Ottava",               QT_TRANSLATE_NOOP("elementName", "Ottava")),
+      ElementName("Pedal",                QT_TRANSLATE_NOOP("elementName", "Pedal")),
+      ElementName("Trill",                QT_TRANSLATE_NOOP("elementName", "Trill")),
+      ElementName("TextLine",             QT_TRANSLATE_NOOP("elementName", "Text Line")),
+      ElementName("NoteLine",             QT_TRANSLATE_NOOP("elementName", "Note Line")),
+      ElementName("Segment",              QT_TRANSLATE_NOOP("elementName", "Segment")),
+      ElementName("System",               QT_TRANSLATE_NOOP("elementName", "System")),
+      ElementName("Compound",             QT_TRANSLATE_NOOP("elementName", "Compound")),
+      ElementName("Chord",                QT_TRANSLATE_NOOP("elementName", "Chord")),
+      ElementName("Slur",                 QT_TRANSLATE_NOOP("elementName", "Slur")),
+      ElementName("Element",              QT_TRANSLATE_NOOP("elementName", "Element")),
+      ElementName("ElementList",          QT_TRANSLATE_NOOP("elementName", "Element List")),
+      ElementName("StaffList",            QT_TRANSLATE_NOOP("elementName", "Staff List")),
+      ElementName("MeasureList",          QT_TRANSLATE_NOOP("elementName", "Measure List")),
+      ElementName("Layout",               QT_TRANSLATE_NOOP("elementName", "Layout")),
+      ElementName("HBox",                 QT_TRANSLATE_NOOP("elementName", "Horizontal Frame")),
+      ElementName("VBox",                 QT_TRANSLATE_NOOP("elementName", "Vertical Frame")),
+      ElementName("TBox",                 QT_TRANSLATE_NOOP("elementName", "Text Frame")),
+      ElementName("FBox",                 QT_TRANSLATE_NOOP("elementName", "Fretboard Diagram Frame")),
+      ElementName("AccidentalBracket",    QT_TRANSLATE_NOOP("elementName", "Accidental Bracket")),
+      ElementName("Icon",                 QT_TRANSLATE_NOOP("elementName", "Icon")),
+      ElementName("Ossia",                QT_TRANSLATE_NOOP("elementName", "Ossia")),
+      ElementName("BagpipeEmbellishment", QT_TRANSLATE_NOOP("elementName", "Bagpipe Embellishment"))
       };
 
 //---------------------------------------------------------
@@ -263,7 +265,7 @@ const char* Element::name() const
 
 QString Element::userName() const
       {
-      return qApp->translate("elementName", name(type()));
+      return qApp->translate("elementName", elementNames[type()].userName);
       }
 
 //---------------------------------------------------------
@@ -438,10 +440,19 @@ Staff* Element::staff() const
 
 QColor Element::curColor() const
       {
+      return curColor(this);
+      }
+
+//---------------------------------------------------------
+//   curColor
+//---------------------------------------------------------
+
+QColor Element::curColor(const Element* proxy) const
+      {
       // the default element color is always interpreted as black in
       // printing
       if (score() && score()->printing())
-            return (_color == MScore::defaultColor) ? Qt::black : _color;
+            return (proxy->color() == MScore::defaultColor) ? Qt::black : proxy->color();
 
       if (flag(ELEMENT_DROP_TARGET))
             return MScore::dropColor;
@@ -458,7 +469,7 @@ QColor Element::curColor() const
             }
       if (!_visible)
             return Qt::gray;
-      return _color;
+      return proxy->color();
       }
 
 //---------------------------------------------------------
@@ -466,20 +477,20 @@ QColor Element::curColor() const
 ///   Return update Rect relative to canvas.
 //---------------------------------------------------------
 
-QRectF Element::drag(const EditData& data)
+QRectF Element::drag(EditData* data)
       {
       QRectF r(canvasBoundingRect());
 
-      qreal x = data.pos.x();
-      qreal y = data.pos.y();
+      qreal x = data->delta.x();
+      qreal y = data->delta.y();
 
       qreal _spatium = spatium();
-      if (data.hRaster) {
+      if (data->hRaster) {
             qreal hRaster = _spatium / MScore::hRaster();
             int n = lrint(x / hRaster);
             x = hRaster * n;
             }
-      if (data.vRaster) {
+      if (data->vRaster) {
             qreal vRaster = _spatium / MScore::vRaster();
             int n = lrint(y / vRaster);
             y = vRaster * n;
@@ -879,6 +890,8 @@ void StaffLines::layout()
 
 //      qDebug("StaffLines::layout:: dist %f st %p\n", dist, st);
 
+      setColor(staff() ? staff()->color() : MScore::defaultColor);
+
       lw = score()->styleS(ST_staffLineWidth).val() * _spatium;
       bbox().setRect(0.0, -lw*.5, width(), lines * dist + lw);
       }
@@ -922,6 +935,7 @@ void StaffLines::draw(QPainter* painter) const
             y = _pos.y() + (lines+4) * dist;
             painter->drawLine(QLineF(x1, y, x2, y));
             }
+
       painter->setPen(QPen(curColor(), lw, Qt::SolidLine, Qt::FlatCap));
       painter->drawLines(ll);
       }
@@ -1392,6 +1406,7 @@ Element* Element::create(ElementType type, Score* score)
             case OSSIA:               return new Ossia(score);
             case IMAGE:             return new Image(score);
             case BAGPIPE_EMBELLISHMENT: return new BagpipeEmbellishment(score);
+            case AMBITUS:           return new Ambitus(score);
 
             case TEXTLINE_SEGMENT:    // return new TextLineSegment(score);
 
@@ -1435,7 +1450,7 @@ Element* Element::create(ElementType type, Score* score)
 
 const char* Element::name(ElementType type)
       {
-      return elementNames[type];
+      return elementNames[type].name;
       }
 
 //---------------------------------------------------------
@@ -1445,7 +1460,7 @@ const char* Element::name(ElementType type)
 Element::ElementType Element::name2type(const QStringRef& s)
       {
       for (int i = 0; i < MAXTYPE; ++i) {
-            if (s == elementNames[i])
+            if (s == elementNames[i].name)
                   return ElementType(i);
             }
 qDebug("name2type: invalid type <%s>\n", s.toUtf8().data());
@@ -1712,6 +1727,97 @@ QPointF Element::scriptUserOff() const
 void Element::scriptSetUserOff(const QPointF& o)
       {
       score()->undoChangeProperty(this, P_USER_OFF, o * spatium());
+      }
+
+//void Element::draw(SymId id, QPainter* p) const { score()->scoreFont()->draw(id, p, magS()); }
+
+//---------------------------------------------------------
+//   drawSymbol
+//---------------------------------------------------------
+
+void Element::drawSymbol(SymId id, QPainter* p, const QPointF& o) const
+      {
+      score()->scoreFont()->draw(id, p, magS(), o);
+      }
+
+void Element::drawSymbol(SymId id, QPainter* p, const QPointF& o, int n) const
+      {
+      score()->scoreFont()->draw(id, p, magS(), o, n);
+      }
+
+void Element::drawSymbols(const QString& s, QPainter* p, const QPointF& o) const
+      {
+      score()->scoreFont()->draw(s, p, magS(), o);
+      }
+
+//---------------------------------------------------------
+//   symHeight
+//---------------------------------------------------------
+
+qreal Element::symHeight(SymId id) const
+      {
+      return score()->scoreFont()->height(id, magS());
+      }
+
+//---------------------------------------------------------
+//   symWidth
+//---------------------------------------------------------
+
+qreal Element::symWidth(SymId id) const
+      {
+      return score()->scoreFont()->width(id, magS());
+      }
+
+//---------------------------------------------------------
+//   symBbox
+//---------------------------------------------------------
+
+QRectF Element::symBbox(SymId id) const
+      {
+      return score()->scoreFont()->bbox(id, magS());
+      }
+
+QRectF Element::symBbox(const QString& s) const
+      {
+      return score()->scoreFont()->bbox(s, magS());
+      }
+
+//---------------------------------------------------------
+//   symAttach
+//---------------------------------------------------------
+
+QPointF Element::symAttach(SymId id) const
+      {
+      return score()->scoreFont()->attach(id, magS());
+      }
+
+//---------------------------------------------------------
+//   toTimeSigString
+//---------------------------------------------------------
+
+QString Element::toTimeSigString(const QString& s) const
+      {
+      QString d;
+      ScoreFont* f = score()->scoreFont();
+      for (int i = 0; i < s.size(); ++i) {
+            switch (s[i].toLatin1()) {
+                  case '+': d += f->toString(SymId::timeSigPlusSmall); break;
+                  case '0': d += f->toString(SymId::timeSig0); break;
+                  case '1': d += f->toString(SymId::timeSig1); break;
+                  case '2': d += f->toString(SymId::timeSig2); break;
+                  case '3': d += f->toString(SymId::timeSig3); break;
+                  case '4': d += f->toString(SymId::timeSig4); break;
+                  case '5': d += f->toString(SymId::timeSig5); break;
+                  case '6': d += f->toString(SymId::timeSig6); break;
+                  case '7': d += f->toString(SymId::timeSig7); break;
+                  case '8': d += f->toString(SymId::timeSig8); break;
+                  case '9': d += f->toString(SymId::timeSig9); break;
+                  case '(': d += f->toString(SymId::timeSigParensLeftSmall); break;
+                  case ')': d += f->toString(SymId::timeSigParensRightSmall); break;
+                  default:  d += s[i]; break;
+                  }
+            }
+      return d;
       }
 
 }

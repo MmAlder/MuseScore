@@ -13,6 +13,7 @@
 #include "notedot.h"
 #include "score.h"
 #include "staff.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -34,7 +35,7 @@ NoteDot::NoteDot(Score* s)
 
 void NoteDot::layout()
       {
-      setbbox(symbols[score()->symIdx()][dotSym].bbox(magS()));
+      setbbox(symBbox(SymId::augmentationDot));
       }
 
 //---------------------------------------------------------
@@ -47,7 +48,7 @@ void NoteDot::draw(QPainter* p) const
             return;
       if (!staff()->isTabStaff() || ((StaffTypeTablature*)staff()->staffType())->stemThrough()) {
             p->setPen(curColor());
-            symbols[score()->symIdx()][dotSym].draw(p, magS());
+            drawSymbol(SymId::augmentationDot, p);
             }
       }
 

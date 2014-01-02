@@ -18,6 +18,7 @@
 namespace Ms {
 
 class TDuration;
+enum class SymId;
 
 //---------------------------------------------------------
 //    @@ Rest
@@ -28,11 +29,11 @@ class Rest : public ChordRest {
       Q_OBJECT
 
       // values calculated by layout:
-      int _sym;
+      SymId _sym;
       int dotline;            // depends on rest symbol
       qreal _mmWidth;         // width of multi measure rest
 
-      virtual QRectF drag(const EditData&) override;
+      virtual QRectF drag(EditData*) override;
       virtual qreal upPos()   const override;
       virtual qreal downPos() const override;
       virtual qreal centerX() const override;
@@ -57,11 +58,12 @@ class Rest : public ChordRest {
 
       void setMMWidth(qreal val);
       qreal mmWidth() const        { return _mmWidth; }
-      int getSymbol(TDuration::DurationType type, int line, int lines,  int* yoffset);
+      SymId getSymbol(TDuration::DurationType type, int line, int lines,  int* yoffset);
 
       int getDotline() const { return dotline; }
-      int sym() const        { return _sym;    }
+      SymId sym() const        { return _sym;    }
       int computeLineOffset();
+      bool isFullMeasureRest() const { return durationType() == TDuration::V_MEASURE; }
       };
 
 

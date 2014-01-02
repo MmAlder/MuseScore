@@ -22,6 +22,7 @@
 #include "staff.h"
 #include "part.h"
 #include "utils.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -157,6 +158,11 @@ Harmony::Harmony(const Harmony& h)
       _parsedForm = h._parsedForm ? new ParsedChord(*h._parsedForm) : 0;
       _textName   = h._textName;
       _userName   = h._userName;
+      foreach(const TextSegment* s, h.textList) {
+            TextSegment* ns = new TextSegment();
+            ns->set(s->text, s->font, s->x, s->y);
+            textList.append(ns);
+            }
       }
 
 //---------------------------------------------------------
@@ -302,7 +308,7 @@ void Harmony::read(XmlReader& e)
       // TODO: now that we can render arbitrary chords,
       // we could try to construct a full representation from a degree list.
       // These will typically only exist for chords imported from MusicXML prior to MuseScore 2.0
-      // or constructed in the Harmony Properties dialog.
+      // or constructed in the Chord Symbol Properties dialog.
 
       if (_rootTpc != INVALID_TPC) {
             if (_id > 0)
@@ -512,12 +518,15 @@ const ChordDescription* Harmony::parseHarmony(const QString& ss, int* root, int*
       else
             preferMinor = false;
       *base = INVALID_TPC;
-      int slash = s.indexOf('/');
+      int slash = s.lastIndexOf('/');
       if (slash != -1) {
             QString bs = s.mid(slash+1);
-            s = s.mid(idx, slash - idx);
+            s = s.mid(idx, slash - idx).simplified();
             int dummy;
             *base = convertRoot(bs, _baseSpelling, dummy);
+            if (*base == INVALID_TPC)
+                  // if no TPC after slash, reassemble chord
+                  s = s + "/" + bs;
             }
       else
             s = s.mid(idx).simplified();
@@ -581,6 +590,14 @@ void Harmony::endEdit()
       Text::endEdit();
       setHarmony(text());
       layout();
+      if (links()) {
+                  foreach(Element* e, *links()) {
+                        if (e == this)
+                              continue;
+                        Harmony* h = static_cast<Harmony*>(e);
+                        h->setHarmony(text());
+                        }
+                  }
       score()->setLayoutAll(true);
       }
 
@@ -825,6 +842,7 @@ void Harmony::layout()
             setPos(0.0, 0.0);
             return;
             }
+
       qreal yy = 0.0;
       if (parent()->type() == SEGMENT) {
             Measure* m = static_cast<Measure*>(parent()->parent());
@@ -833,7 +851,38 @@ void Harmony::layout()
             }
       else if (parent()->type() == FRET_DIAGRAM)
             yy = score()->styleP(ST_harmonyFretDist);
-      setPos(0.0, yy);
+      yy += textStyle().offset(spatium()).y();
+      if (!editMode()) {
+            qreal hb = lineHeight() - Text::baseLine();
+            if (align() & ALIGN_BOTTOM)
+                  yy -= hb;
+            else if (align() & ALIGN_VCENTER) {
+                  yy -= hb;
+                  yy += (height() * .5);
+                  }
+            else if (align() & ALIGN_BASELINE) {
+                  }
+            else { // ALIGN_TOP
+                  yy -= hb;
+                  yy += height();
+                  }
+            }
+
+      qreal xx = textStyle().offset(spatium()).x();
+      if (!editMode()) {
+            qreal cw = symWidth(SymId::noteheadBlack);
+            if (align() & ALIGN_RIGHT) {
+                  xx += cw;
+                  xx -= width();
+                  }
+            else if (align() & ALIGN_HCENTER) {
+                  xx += (cw * .5);
+                  xx -= (width() * .5);
+                  }
+            }
+
+      setPos(xx, yy);
+
 
       if (!readPos().isNull()) {
             // version 114 is measure based
@@ -1058,6 +1107,8 @@ void Harmony::render(const QList<RenderAction>& renderList, qreal& x, qreal& y, 
 
 void Harmony::render(const TextStyle* st)
       {
+      int capo = score()->styleI(ST_capoPosition);
+
       if (st == 0)
             st = &textStyle();
       ChordList* chordList = score()->style()->chordList();
@@ -1100,6 +1151,42 @@ void Harmony::render(const TextStyle* st)
       if (_baseTpc != INVALID_TPC)
             render(chordList->renderListBase, x, y, _baseTpc, _baseSpelling, _baseLowerCase);
 
+      if (_rootTpc != INVALID_TPC && capo > 0 && capo < 12) {
+            int tpcOffset[] = { 0, 5, -2, 3, -4, 1, 6, -1, 4, -3, 2, -5 };
+            int capoRootTpc = _rootTpc + tpcOffset[capo];
+            int capoBassTpc = _baseTpc;
+
+            if (capoBassTpc != INVALID_TPC)
+                  capoBassTpc += tpcOffset[capo];
+
+            /*
+             * For guitarists, avoid x and bb in Root or Bass,
+             * and also avoid E#, B#, Cb and Fb in Root.
+             */
+            if (capoRootTpc < 8 || (capoBassTpc != INVALID_TPC && capoBassTpc < 6)) {
+                  capoRootTpc += 12;
+                  if (capoBassTpc != INVALID_TPC)
+                        capoBassTpc += 12;
+                  }
+            else if (capoRootTpc > 24 || (capoBassTpc != INVALID_TPC && capoBassTpc > 26)) {
+                  capoRootTpc -= 12;
+                  if (capoBassTpc != INVALID_TPC)
+                        capoBassTpc -= 12;
+                  }
+
+            render("(", x, y);
+            render(chordList->renderListRoot, x, y, capoRootTpc, _rootSpelling, _rootLowerCase);
+
+            // render extension
+            const ChordDescription* cd = getDescription();
+            if (cd)
+                  render(cd->renderList, x, y, 0);
+
+            if (capoBassTpc != INVALID_TPC)
+                  render(chordList->renderListBase, x, y, capoBassTpc, _baseSpelling, _baseLowerCase);
+            render(")", x, y);
+            }
+
       if (_rightParen)
             render(" )", x, y);
       }
@@ -1111,6 +1198,16 @@ void Harmony::render(const TextStyle* st)
 void Harmony::spatiumChanged(qreal oldValue, qreal newValue)
       {
       Text::spatiumChanged(oldValue, newValue);
+      render();
+      }
+
+//---------------------------------------------------------
+//   textStyleChanged
+//---------------------------------------------------------
+
+void Harmony::textStyleChanged()
+      {
+      Text::textStyleChanged();
       render();
       }
 

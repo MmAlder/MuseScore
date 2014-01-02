@@ -40,13 +40,13 @@ QT4_WRAP_UI (ui_headers
       textpalette.ui  timedialog.ui symboldialog.ui  shortcutcapturedialog.ui  editdrumset.ui
       editstaff.ui voltaproperties.ui timesigproperties.ui boxproperties.ui
       instrwizard.ui timesigwizard.ui newwizard.ui aboutbox.ui aboutmusicxmlbox.ui
-      chordedit.ui transposedialog.ui lineproperties.ui excerptsdialog.ui  stafftext.ui tupletdialog.ui
+      transposedialog.ui lineproperties.ui excerptsdialog.ui  stafftext.ui tupletdialog.ui
       glissandoprop.ui articulation.ui metaedit.ui palette.ui select.ui
       synthcontrol.ui splitstaff.ui cellproperties.ui keyedit.ui selectinstr.ui
       fretdprops.ui stafftype.ui sectionbreak.ui  bend.ui tremolobar.ui textproperties.ui
       editpitch.ui editstringdata.ui editraster.ui mediadialog.ui textstyle.ui album.ui layer.ui
       omrpanel.ui startdialog.ui masterpalette.ui pluginManager.ui harmonyedit.ui pathlistdialog.ui
-      note_groups.ui importmidi_panel.ui
+      note_groups.ui importmidi_panel.ui resourceManager.ui
 
       debugger/barline.ui
       debugger/harmony.ui
@@ -113,6 +113,7 @@ QT4_WRAP_UI (ui_headers
       inspector/inspector_textline.ui
       inspector/inspector_slur.ui
       inspector/inspector_text.ui
+      inspector/inspector_ambitus.ui
       ${SCRIPT_UI}
       )
 
@@ -128,7 +129,7 @@ QT4_WRAP_CPP (mocs
       timedialog.h symboldialog.h shortcutcapturedialog.h simplebutton.h
       greendotbutton.h recordbutton.h editdrumset.h editstaff.h selinstrument.h
       voltaproperties.h timesigproperties.h boxproperties.h newwizard.h
-      transposedialog.h chordedit.h lineproperties.h
+      transposedialog.h lineproperties.h
       excerptsdialog.h stafftextproperties.h glissandoproperties.h
       articulationprop.h metaedit.h magbox.h
       textprop.h textproperties.h tupletdialog.h
@@ -147,14 +148,15 @@ QT4_WRAP_CPP (mocs
       inspector/inspectorTrill.h
       inspector/inspectorHairpin.h qmlplugin.h palettebox.h workspace.h pluginManager.h
       inspector/inspectorJump.h inspector/inspectorMarker.h inspector/inspectorGlissando.h
-      inspector/inspectorNote.h
+      inspector/inspectorNote.h inspector/inspectorAmbitus.h
       paletteBoxButton.h pathlistdialog.h exampleview.h noteGroups.h inspector/inspectorTextLine.h
       importmidi_panel.h importmidi_operations.h
       importmidi_opmodel.h importmidi_trmodel.h importmidi_opdelegate.h
       importmidi_operation.h importmidi_quant.h importmidi_chord.h
-      importmidi_tuplet.h importmidi_inner.h importmidi_data.h importmidi_swing.h
+      importmidi_inner.h importmidi_data.h importmidi_swing.h
       debugger/debugger.h importmidi_fraction.h importmidi_drum.h
       importmidi_lrhand.h importmidi_lyrics.h importmidi_trview.h
+      resourceManager.h downloadUtils.h
       ${OMR_MOCS}
       ${SCRIPT_MOCS}
       )
@@ -193,9 +195,8 @@ endif (USE_JACK)
 
 if (APPLE)
         set (ExecutableName mscore MACOSX_BUNDLE)
-        set (MACOSX_BUNDLE_INFO_STRING MuseScore prerelease for Mac OSX)
         set (MACOSX_BUNDLE_ICON_FILE      mscore.icns)
-        set (MACOSX_BUNDLE_GUI_IDENTIFIER net.sourceforge.mscore)
+        set (MACOSX_BUNDLE_GUI_IDENTIFIER org.musescore.MuseScore)
         set (MACOSX_BUNDLE_LONG_VERSION_STRING ${MUSESCORE_VERSION_FULL})
         set (MACOSX_BUNDLE_BUNDLE_NAME MuseScore)
         set (MACOSX_BUNDLE_SHORT_VERSION_STRING ${MUSESCORE_VERSION})
@@ -237,7 +238,7 @@ add_executable ( ${ExecutableName}
       # exportly.cpp
       editdrumset.cpp editstaff.cpp voltaproperties.cpp
       timesigproperties.cpp newwizard.cpp transposedialog.cpp
-      chordedit.cpp excerptsdialog.cpp metaedit.cpp magbox.cpp
+      excerptsdialog.cpp metaedit.cpp magbox.cpp
       capella.cpp capxml.cpp exportaudio.cpp palettebox.cpp
       textproperties.cpp synthcontrol.cpp drumroll.cpp pianoroll.cpp piano.cpp
       pianoview.cpp drumview.cpp scoretab.cpp keyedit.cpp harmonyedit.cpp
@@ -262,14 +263,17 @@ add_executable ( ${ExecutableName}
       inspector/inspectorHairpin.cpp qmlplugin.cpp editlyrics.cpp
       musicxmlsupport.cpp exportxml.cpp importxml.cpp importxmlfirstpass.cpp
       savePositions.cpp pluginManager.cpp inspector/inspectorJump.cpp inspector/inspectorMarker.cpp
-      inspector/inspectorGlissando.cpp inspector/inspectorNote.cpp paletteBoxButton.cpp
-      driver.cpp exportmidi.cpp noteGroups.cpp
+      inspector/inspectorGlissando.cpp inspector/inspectorNote.cpp inspector/inspectorAmbitus.cpp
+      paletteBoxButton.cpp driver.cpp exportmidi.cpp noteGroups.cpp
       pathlistdialog.cpp exampleview.cpp inspector/inspectorTextLine.cpp
       importmidi_panel.cpp importmidi_operations.cpp miconengine.cpp
       importmidi_opmodel.cpp importmidi_trmodel.cpp importmidi_opdelegate.cpp
       importmidi_meter.cpp importmidi_quant.cpp importmidi_tuplet.cpp importmidi_chord.cpp
       importmidi_data.cpp importmidi_swing.cpp importmidi_fraction.cpp importmidi_drum.cpp
       importmidi_clef.cpp importmidi_lrhand.cpp importmidi_lyrics.cpp importmidi_trview.cpp
+      importmidi_inner.cpp
+      resourceManager.cpp downloadUtils.cpp
+      textcursor.cpp
 
       ${OMR_FILES}
       ${AUDIO}
@@ -492,8 +496,8 @@ endif (MINGW)
 
 if (APPLE)
      install (FILES
-      ../fonts/gonville-20.ttf
-      ../fonts/mscore-20.ttf
+      ../fonts/gonville/gonville-20.ttf
+      ../fonts/mscore/mscore.ttf
       ../fonts/MuseJazz.ttf
       ../fonts/FreeSerifMscore.ttf
       ../fonts/FreeSans.ttf

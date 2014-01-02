@@ -31,6 +31,7 @@
 #include "dynamic.h"
 #include "drumset.h"
 #include "style.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -119,6 +120,7 @@ static const StyleVal2 style114[] = {
       { ST_chordDescriptionFile,         QVariant(QString("stdchords.xml")) },
       { ST_chordStyle,                   QVariant(QString("custom")) },
       { ST_chordsXmlFile,                QVariant(true) },
+      { ST_harmonyY,                     QVariant(0.0) },
       { ST_concertPitch,                 QVariant(false) },
       { ST_createMultiMeasureRests,      QVariant(false) },
       { ST_minEmptyMeasures,             QVariant(2) },
@@ -151,14 +153,14 @@ static const StyleVal2 style114[] = {
 static SymId resolveSymCompatibility(SymId i, QString programVersion)
       {
       if (!programVersion.isEmpty() && programVersion < "1.1")
-            i = SymId(i + 5);
-      switch(i) {
-            case 197:   return pedalPedSym;
-            case 191:   return pedalasteriskSym;
-            case 193:   return pedaldotSym;
-            case 192:   return pedaldashSym;
-            case 139:   return trillSym;
-            default:    return noSym;
+            i = SymId(int(i) + 5);
+      switch(int(i)) {
+            case 197:   return SymId::keyboardPedalPed;
+//TODO::smufl            case 191:   return SymId(pedalasteriskSym);
+//            case 193:   return SymId(pedaldotSym);
+//            case 192:   return SymId(pedaldashSym);
+            case 139:   return SymId::ornamentTrill;
+            default:    return SymId::noSym;
             }
       }
 
@@ -178,8 +180,13 @@ void Staff::read114(XmlReader& e)
                   setInvisible(e.readInt());
             else if (tag == "slashStyle")
                   e.skipCurrentElement();
-            else if (tag == "cleflist")
+            else if (tag == "cleflist") {
                   clefs.read(e, _score);
+                  if (clefs.empty()) {
+                        ClefType ct = Clef::clefType("0");
+                        clefs.setClef(0, ClefTypeList(ct, ct));
+                        }
+                  }
             else if (tag == "keylist")
                   _keymap.read(e, _score);
             else if (tag == "bracket") {
@@ -323,10 +330,29 @@ Score::FileError Score::read114(XmlReader& e)
                   TextStyle s;
                   s.read(e);
 
-                  // Change 1.2 Poet to Lyricist
-                  if (s.name() == "Poet")
+                  // convert 1.2 text styles
+                  if (s.name() == "Chordname")
+                        s.setName("Chord Symbol");
+                  else if (s.name() == "Lyrics odd lines")
+                        s.setName("Lyrics Odd Lines");
+                  else if (s.name() == "Lyrics even lines")
+                        s.setName("Lyrics Even Lines");
+                  else if (s.name() == "InstrumentsLong")
+                        s.setName("Instrument Name (Long)");
+                  else if (s.name() == "InstrumentsShort")
+                        s.setName("Instrument Name (Short)");
+                  else if (s.name() == "InstrumentsExcerpt")
+                        s.setName("Instrument Name (Part)");
+                  else if (s.name() == "Poet")
                         s.setName("Lyricist");
-                  if (s.name() == "Lyrics odd lines" || s.name() == "Lyrics even lines")
+                  else if (s.name() == "Technik")
+                        s.setName("Technique");
+                  else if (s.name() == "TextLine")
+                        s.setName("Text Line");
+                  else if (s.name() == "Tuplets")
+                        s.setName("Tuplet");
+
+                  if (s.name() == "Lyrics Odd Lines" || s.name() == "Lyrics Even Lines")
                         s.setAlign((s.align() & ~ ALIGN_VMASK) | Align(ALIGN_BASELINE));
 
                   _style.setTextStyle(s);
@@ -387,6 +413,8 @@ Score::FileError Score::read114(XmlReader& e)
                         s->setTick(e.tick());
                   else
                         e.setTick(s->tick());      // update current tick
+                  if (s->track2() == -1)
+                        s->setTrack2(s->track());
                   if (s->tick2() == -1) {
                         delete s;
                         qDebug("invalid spanner %s tick2: %d\n",
@@ -427,8 +455,18 @@ Score::FileError Score::read114(XmlReader& e)
                      s->barLineSpan(), n - idx);
                   s->setBarLineSpan(n - idx);
                   }
-
-            for (auto i = s->clefList().cbegin(); i != s->clefList().cend(); ++i) {
+            // first clef can be implicit in 1.3 #22607
+            if(s->clefList()->count(0) == 0) {
+                  Segment* seg = firstMeasure()->getSegment(Segment::SegClef, 0);
+                  ClefType ct = Clef::clefType("0");
+                  Clef* clef = new Clef(this);
+                  clef->setClefType(ct);
+                  clef->setTrack(track);
+                  clef->setParent(seg);
+                  clef->setGenerated(false);
+                  seg->add(clef);
+                  }
+            for (auto i = s->clefList()->cbegin(); i != s->clefList()->cend(); ++i) {
                   int tick = i->first;
                   ClefType clefId = i->second._concertClef;
                   Measure* m = tick2measure(tick);
@@ -477,7 +515,7 @@ Score::FileError Score::read114(XmlReader& e)
 
       for (std::pair<int,Spanner*> p : spanner()) {
             Spanner* s = p.second;
-            if (s->anchor() == Spanner::ANCHOR_SEGMENT) {
+            if (s->anchor() == Spanner::ANCHOR_SEGMENT && s->type() != Element::SLUR) {
                   Segment* segment = tick2segment(s->tick2(), true, Segment::SegChordRest);
                   if (segment) {
                         segment = segment->prev1(Segment::SegChordRest);
@@ -607,9 +645,9 @@ Score::FileError Score::read114(XmlReader& e)
 
       // adjust some styles
       if (style(ST_lyricsDistance) == MScore::baseStyle()->value(ST_lyricsDistance))
-            style()->set(ST_lyricsDistance, 2.0);
+            style()->set(ST_lyricsDistance, 2.0f);
       if (style(ST_voltaY) == MScore::baseStyle()->value(ST_voltaY))
-            style()->set(ST_voltaY, -2.0);
+            style()->set(ST_voltaY, -2.0f);
       if (style(ST_hideEmptyStaves).toBool() == true) // http://musescore.org/en/node/16228
             style()->set(ST_dontHideStavesInFirstSystem, false);
       if (style(ST_useGermanNoteNames).toBool())
@@ -638,7 +676,6 @@ Score::FileError Score::read114(XmlReader& e)
 
 //      _mscVersion = MSCVERSION;     // for later drag & drop usage
       fixTicks();
-      renumberMeasures();
       rebuildMidiMapping();
       updateChannel();
       updateNotes();    // only for parts needed?

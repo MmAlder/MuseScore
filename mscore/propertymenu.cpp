@@ -33,7 +33,6 @@
 #include "glissandoproperties.h"
 #include "fretproperties.h"
 #include "selinstrument.h"
-#include "chordedit.h"
 #include "pianoroll.h"
 #include "editstyle.h"
 #include "editstaff.h"
@@ -78,15 +77,6 @@ namespace Ms {
 void ScoreView::genPropertyMenu1(Element* e, QMenu* popup)
       {
       if (!e->generated() || e->type() == Element::BAR_LINE) {
-#if 0
-            if (e->type() != Element::LAYOUT_BREAK) {
-                  if (e->visible())
-                        popup->addAction(tr("Set Invisible"))->setData("invisible");
-                  else
-                        popup->addAction(tr("Set Visible"))->setData("invisible");
-                  popup->addAction(tr("Color..."))->setData("color");
-                  }
-#endif
             if (e->flag(ELEMENT_HAS_TAG)) {
                   popup->addSeparator();
 
@@ -111,12 +101,6 @@ void ScoreView::genPropertyMenu1(Element* e, QMenu* popup)
 
 void ScoreView::genPropertyMenuText(Element* e, QMenu* popup)
       {
-#if 0
-      if (e->visible())
-            popup->addAction(tr("Set Invisible"))->setData("invisible");
-      else
-            popup->addAction(tr("Set Visible"))->setData("invisible");
-#endif
       if (e->flag(ELEMENT_HAS_TAG)) {
             popup->addSeparator();
 
@@ -163,7 +147,7 @@ void ScoreView::createElementPropertyMenu(Element* e, QMenu* popup)
             }
       else if (e->type() == Element::TREMOLOBAR) {
             genPropertyMenu1(e, popup);
-            popup->addAction(tr("TremoloBar Properties..."))->setData("tr-props");
+            popup->addAction(tr("Tremolo Bar Properties..."))->setData("tr-props");
             }
       else if (e->type() == Element::HBOX) {
             QMenu* textMenu = popup->addMenu(tr("Add"));
@@ -292,7 +276,7 @@ void ScoreView::createElementPropertyMenu(Element* e, QMenu* popup)
             popup->addAction(tr("Style..."))->setData("style");
             popup->addAction(tr("Chord Articulation..."))->setData("articulation");
             }
-      else if (e->type() == Element::LAYOUT_BREAK && static_cast<LayoutBreak*>(e)->layoutBreakType() == LAYOUT_BREAK_SECTION) {
+      else if (e->type() == Element::LAYOUT_BREAK && static_cast<LayoutBreak*>(e)->layoutBreakType() == LayoutBreak::SECTION) {
             popup->addAction(tr("Section Break Properties..."))->setData("break-props");
             }
       else if (e->type() == Element::INSTRUMENT_CHANGE) {
@@ -305,17 +289,11 @@ void ScoreView::createElementPropertyMenu(Element* e, QMenu* popup)
             else
                   popup->addAction(tr("Set Visible"))->setData("invisible");
             popup->addAction(tr("Color..."))->setData("color");
-            popup->addAction(tr("Fret Diagram Properties..."))->setData("fret-props");
+            popup->addAction(tr("Fretboard Diagram Properties..."))->setData("fret-props");
             }
       else if (e->type() == Element::GLISSANDO) {
             genPropertyMenu1(e, popup);
             popup->addAction(tr("Glissando Properties..."))->setData("gliss-props");
-            }
-      else if (e->type() == Element::HARMONY) {
-            genPropertyMenu1(e, popup);
-            popup->addSeparator();
-            popup->addAction(tr("Harmony Properties..."))->setData("ha-props");
-            popup->addAction(tr("Text Properties..."))->setData("text-props");
             }
       else if (e->type() == Element::INSTRUMENT_NAME) {
             popup->addAction(tr("Staff Properties..."))->setData("staff-props");
@@ -350,7 +328,6 @@ void ScoreView::elementPropertyAction(const QString& cmd, Element* e)
             }
       else if (cmd == "frame-text") {
             Text* s = new Text(score());
-//            s->setSubtype(TEXT_FRAME);
             s->setTextStyleType(TEXT_STYLE_FRAME);
             s->setParent(e);
             score()->undoAddElement(s);
@@ -610,17 +587,6 @@ void ScoreView::elementPropertyAction(const QString& cmd, Element* e)
       else if (cmd == "gliss-props") {
             GlissandoProperties vp(static_cast<Glissando*>(e));
             vp.exec();
-            }
-       else if (cmd == "ha-props") {
-            Harmony* ha = static_cast<Harmony*>(e);
-            ChordEdit ce(ha->score());
-            ce.setHarmony(ha);
-            int rv = ce.exec();
-            if (rv) {
-                  Harmony* h = ce.harmony()->clone();
-                  h->render();
-                  score()->undoChangeElement(ha, h);
-                  }
             }
       else if (cmd == "staff-props") {
             EditStaff editStaff(e->staff(), 0);

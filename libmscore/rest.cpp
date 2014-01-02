@@ -42,7 +42,7 @@ Rest::Rest(Score* s)
       setFlags(ELEMENT_MOVABLE | ELEMENT_SELECTABLE | ELEMENT_ON_STAFF);
       _beamMode  = BeamMode::NONE;
       dotline    = -1;
-      _sym       = rest4Sym;
+      _sym       = SymId::restQuarter;
       }
 
 Rest::Rest(Score* s, const TDuration& d)
@@ -51,7 +51,7 @@ Rest::Rest(Score* s, const TDuration& d)
       setFlags(ELEMENT_MOVABLE | ELEMENT_SELECTABLE | ELEMENT_ON_STAFF);
       _beamMode  = BeamMode::NONE;
       dotline    = -1;
-      _sym       = rest4Sym;
+      _sym       = SymId::restQuarter;
       setDurationType(d);
       if (d.fraction().isValid())
             setDuration(d.fraction());
@@ -73,12 +73,12 @@ void Rest::draw(QPainter* painter) const
 
       painter->setPen(curColor());
 
-      if (parent() && measure() && measure()->multiMeasure()) {
+      if (parent() && measure() && measure()->isMMRest()) {
             //only on voice 1
-            if((track() % VOICES) != 0)
+            if ((track() % VOICES) != 0)
                   return;
             Measure* m = measure();
-            int n      = m->multiMeasure();
+            int n      = m->mmRestCount();
             qreal pw = _spatium * .7;
             QPen pen(painter->pen());
             pen.setWidthF(pw);
@@ -97,41 +97,22 @@ void Rest::draw(QPainter* painter) const
             painter->drawLine(QLineF(x1, y-_spatium, x1, y+_spatium));
             painter->drawLine(QLineF(x2, y-_spatium, x2, y+_spatium));
 
-#ifdef USE_GLYPHS
-            QRawFont rfont = fontId2RawFont(0);
-            rfont.setPixelSize(20.0 * spatium()/(PPI * SPATIUM20));
-
-            QGlyphRun glyphs;
-            QVector<quint32> idx = rfont.glyphIndexesForString(QString("%1").arg(n));
-            glyphs.setGlyphIndexes(idx);
-            QVector<QPointF> adv = rfont.advancesForGlyphIndexes(idx);
-            adv.insert(0, QPointF());
-            glyphs.setPositions(adv);
-            glyphs.setRawFont(rfont);
-            QRectF r = glyphs.boundingRect();
-            y  = -_spatium * .5 - (staff()->height()*.5);
-            painter->drawGlyphRun(QPointF((x2 - x1) * .5 + x1 - r.width() * .5, y), glyphs);
-#else
-            QFont font = fontId2font(0);
-            font.setPixelSize(lrint(20.0 * spatium()/(PPI * SPATIUM20)));
-            painter->setFont(font);
-            QFontMetricsF fm(font);
-            y  = -_spatium * .5 - (staff()->height()*.5) - fm.ascent();
-            painter->drawText(QRectF(center(x1, x2), y, .0, .0),
-               Qt::AlignHCenter|Qt::TextDontClip,
-               QString("%1").arg(n));
-#endif
+            painter->setFont(score()->scoreFont()->font());
+            QFontMetricsF fm(score()->scoreFont()->font());
+            QString s = toTimeSigString(QString("%1").arg(n));
+            y  = -_spatium * 1.5 - staff()->height() *.5;
+            qreal x = center(x1, x2);
+            x -= symBbox(s).width() * .5;
+            drawSymbols(s, painter, QPointF(x, y));
             }
       else {
-            qreal mag = magS();
-            symbols[score()->symIdx()][_sym].draw(painter, mag);
+            drawSymbol(_sym, painter);
             int dots = durationType().dots();
             if (dots) {
                   qreal y = dotline * _spatium * .5;
                   for (int i = 1; i <= dots; ++i) {
-                        qreal x = symbols[score()->symIdx()][_sym].width(mag)
-                                   + point(score()->styleS(ST_dotNoteDistance)) * i;
-                        symbols[score()->symIdx()][dotSym].draw(painter, mag, QPointF(x, y));
+                        qreal x = symWidth(_sym) + point(score()->styleS(ST_dotNoteDistance)) * i;
+                        drawSymbol(SymId::augmentationDot, painter, QPointF(x, y));
                         }
                   }
             }
@@ -148,7 +129,7 @@ void Rest::setUserOffset(qreal x, qreal y)
       {
       qreal _spatium = spatium();
       int line = lrint(y/_spatium);
-
+#if 0
       if (_sym == wholerestSym && (line <= -2 || line >= 3))
             _sym = outsidewholerestSym;
       else if (_sym == outsidewholerestSym && (line > -2 && line < 4))
@@ -157,7 +138,7 @@ void Rest::setUserOffset(qreal x, qreal y)
             _sym = outsidehalfrestSym;
       else if (_sym == outsidehalfrestSym && (line > -3 && line < 3))
             _sym = halfrestSym;
-
+#endif
       setUserOff(QPointF(x, qreal(line) * _spatium));
       }
 
@@ -165,9 +146,9 @@ void Rest::setUserOffset(qreal x, qreal y)
 //   drag
 //---------------------------------------------------------
 
-QRectF Rest::drag(const EditData& data)
+QRectF Rest::drag(EditData* data)
       {
-      QPointF s(data.pos);
+      QPointF s(data->delta);
       QRectF r(abbox());
 
       // Limit horizontal drag range
@@ -212,6 +193,8 @@ bool Rest::acceptDrop(MuseScoreView*, const QPointF&, Element* e) const
          ) {
             return true;
             }
+      if(type == REPEAT_MEASURE && durationType().type() == TDuration::V_MEASURE)
+            return true;
       return false;
       }
 
@@ -255,6 +238,12 @@ Element* Rest::drop(const DropData& data)
                   delete e;
                   }
                   break;
+            case REPEAT_MEASURE:
+                  delete e;
+                  if (durationType().type() == TDuration::V_MEASURE) {
+                        measure()->cmdInsertRepeatMeasure(staffIdx());
+                        }
+                  break;
             default:
                   return ChordRest::drop(data);
             }
@@ -265,41 +254,44 @@ Element* Rest::drop(const DropData& data)
 //   getSymbol
 //---------------------------------------------------------
 
-int Rest::getSymbol(TDuration::DurationType type, int line, int lines, int* yoffset)
+SymId Rest::getSymbol(TDuration::DurationType type, int line, int lines, int* yoffset)
       {
       *yoffset = 2;
       switch(type) {
             case TDuration::V_LONG:
-                  return longarestSym;
+                  return SymId::restLonga;
             case TDuration::V_BREVE:
-                  return breverestSym;
+                  return SymId::restDoubleWhole;
             case TDuration::V_MEASURE:
                   if (duration() >= Fraction(2, 1))
-                        return breverestSym;
+                        return SymId::restDoubleWhole;
                   // fall trough
             case TDuration::V_WHOLE:
                   *yoffset = 1;
-                  return (line <= -2 || line >= (lines - 1)) ? outsidewholerestSym : wholerestSym;
+                  return (line <= -2 || line >= (lines - 1)) ? SymId::restWhole : SymId::restWhole;
             case TDuration::V_HALF:
-                  return (line <= -3 || line >= (lines - 2)) ? outsidehalfrestSym : halfrestSym;
+                  return (line <= -3 || line >= (lines - 2)) ? SymId::restHalf : SymId::restHalf;
             case TDuration::V_QUARTER:
-                  return rest4Sym;
+                  return SymId::restQuarter;
             case TDuration::V_EIGHT:
-                  return rest8Sym;
+                  return SymId::rest8th;
             case TDuration::V_16TH:
-                  return rest16Sym;
+                  return SymId::rest16th;
             case TDuration::V_32ND:
-                  return rest32Sym;
+                  return SymId::rest32nd;
             case TDuration::V_64TH:
-                  return rest64Sym;
+                  return SymId::rest64th;
             case TDuration::V_128TH:
-                  return rest128Sym;
+                  return SymId::rest128th;
             case TDuration::V_256TH:
-                  qDebug("Rest: no symbol for 1/256");
-                  return rest128Sym;
+                  return SymId::rest256th;
+            case TDuration::V_512TH:
+                  return SymId::rest512th;
+            case TDuration::V_1024TH:
+                  return SymId::rest1024th;
             default:
                   qDebug("unknown rest type %d", type);
-                  return rest4Sym;
+                  return SymId::restQuarter;
             }
       }
 
@@ -311,7 +303,7 @@ void Rest::layout()
       {
       _space.setLw(0.0);
 
-      if (parent() && measure() && measure()->multiMeasure()) {
+      if (parent() && measure() && measure()->isMMRest()) {
             _space.setRw(point(score()->styleS(ST_minMMRestWidth)));
             return;
             }
@@ -320,12 +312,21 @@ void Rest::layout()
       if (staff() && staff()->isTabStaff()) {
             StaffTypeTablature* tab = (StaffTypeTablature*)staff()->staffType();
             // if rests are shown and note values are shown as duration symbols
-            if(tab->showRests() &&tab->genDurations()) {
+            if(tab->showRests() && tab->genDurations()) {
+                  TDuration::DurationType type = durationType().type();
+                  int                     dots = durationType().dots();
+                  // if rest is whole measure, convert into actual type and dot values
+                  if (type == TDuration::V_MEASURE) {
+                        int       ticks = measure()->ticks();
+                        TDuration dur   = TDuration(Fraction::fromTicks(ticks)).type();
+                        type = dur.type();
+                        dots = dur.dots();
+                        }
                   // symbol needed; if not exist, create, if exists, update duration
                   if (!_tabDur)
-                        _tabDur = new TabDurationSymbol(score(), tab, durationType().type(), dots());
+                        _tabDur = new TabDurationSymbol(score(), tab, type, dots);
                   else
-                        _tabDur->setDuration(durationType().type(), dots(), tab);
+                        _tabDur->setDuration(type, dots, tab);
                   _tabDur->setParent(this);
 // needed?        _tabDur->setTrack(track());
                   _tabDur->layout();
@@ -349,6 +350,8 @@ void Rest::layout()
             case TDuration::V_32ND:
                   dotline = -3;
                   break;
+            case TDuration::V_1024TH:
+            case TDuration::V_512TH:
             case TDuration::V_256TH:
             case TDuration::V_128TH:
                   dotline = -5;
@@ -381,7 +384,7 @@ void Rest::layout()
             rs = Spatium(score()->styleS(ST_dotNoteDistance)
                + dots() * score()->styleS(ST_dotDotDistance));
             }
-      setbbox(symbols[score()->symIdx()][_sym].bbox(magS()));
+      setbbox(symBbox(_sym));
       _space.setRw(width() + point(rs));
       }
 
@@ -431,7 +434,9 @@ int Rest::computeLineOffset()
                   case TDuration::V_128TH:
                         lineOffset = up ? -8 : 8;
                         break;
-                  case TDuration::V_256TH:             // not available
+                  case TDuration::V_1024TH:
+                  case TDuration::V_512TH:
+                  case TDuration::V_256TH:
                         lineOffset = up ? -10 : 6;
                         break;
                   default:
@@ -454,7 +459,9 @@ int Rest::computeLineOffset()
                   case TDuration::V_32ND:
                   case TDuration::V_64TH:
                   case TDuration::V_128TH:
-                  case TDuration::V_256TH:             // not available
+                  case TDuration::V_256TH:
+                  case TDuration::V_512TH:
+                  case TDuration::V_1024TH:
                         if (lines == 1)
                               lineOffset = -4;
                         break;
@@ -471,7 +478,7 @@ int Rest::computeLineOffset()
 
 qreal Rest::centerX() const
       {
-      return symbols[score()->symIdx()][_sym].width(magS())*.5;
+      return symWidth(_sym) * .5;
       }
 
 //---------------------------------------------------------
@@ -480,7 +487,7 @@ qreal Rest::centerX() const
 
 qreal Rest::upPos() const
       {
-      return symbols[score()->symIdx()][_sym].bbox(magS()).y();
+      return symBbox(_sym).y();
       }
 
 //---------------------------------------------------------
@@ -489,7 +496,7 @@ qreal Rest::upPos() const
 
 qreal Rest::downPos() const
       {
-      return symbols[score()->symIdx()][_sym].bbox(magS()).y() + symbols[score()->symIdx()][_sym].height(magS());
+      return symBbox(_sym).y() + symHeight(_sym);
       }
 
 //---------------------------------------------------------
@@ -510,7 +517,7 @@ void Rest::setMMWidth(qreal val)
       {
       _mmWidth = val;
       Segment* s = segment();
-      if (s && s->measure() && s->measure()->multiMeasure()) {
+      if (s && s->measure() && s->measure()->isMMRest()) {
             qreal _spatium = spatium();
             qreal h = _spatium * 2;
             qreal w = _mmWidth;                       // + 1*lineWidth of vertical lines

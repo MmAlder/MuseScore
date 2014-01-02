@@ -34,6 +34,14 @@ bool Workspace::workspacesRead = false;
 QList<Workspace*> Workspace::_workspaces;
 Workspace* Workspace::currentWorkspace;
 
+Workspace Workspace::_advancedWorkspace {
+      QString("Advanced"), QString("Advanced"), false, true
+      };
+
+Workspace Workspace::_basicWorkspace {
+      QString("Basic"), QString("Basic"), false, true
+      };
+
 //---------------------------------------------------------
 //   undoWorkspace
 //---------------------------------------------------------
@@ -263,8 +271,6 @@ void Workspace::write()
       xml.etag();
       xml.etag();
       cbuf.seek(0);
-      //f.addDirectory("META-INF");
-      //f.addDirectory("Pictures");
       f.addFile("META-INF/container.xml", cbuf.data());
 
       // save images
@@ -282,7 +288,7 @@ void Workspace::write()
       xml.header();
       xml.stag("museScore version=\"" MSC_VERSION "\"");
       xml.stag("Workspace");
-      xml.tag("name", _name);
+      // xml.tag("name", _name);
       PaletteBox* pb = mscore->getPaletteBox();
       pb->write(xml);
       xml.etag();
@@ -295,52 +301,33 @@ void Workspace::write()
             writeFailed(_path);
       }
 
+extern QString readRootFile(MQZipReader*, QList<QString>&);
+
 //---------------------------------------------------------
 //   read
 //---------------------------------------------------------
 
 void Workspace::read()
       {
+      if (_path == "Advanced") {
+            mscore->setAdvancedPalette();
+            return;
+            }
+      if (_path == "Basic") {
+            mscore->setBasicPalette();
+            return;
+            }
       if (_path.isEmpty() || !QFile(_path).exists()) {
-            PaletteBox* paletteBox = mscore->getPaletteBox();
-            paletteBox->clear();
-            mscore->populatePalette();
+            qDebug("cannot read workspace <%s>", qPrintable(_path));
+            mscore->setAdvancedPalette();       // set default palette
             return;
             }
       QFileInfo fi(_path);
       _readOnly = !fi.isWritable();
 
       MQZipReader f(_path);
-      QByteArray ba = f.fileData("META-INF/container.xml");
-
-      XmlReader e(ba);
-
-      // extract first rootfile
-      QString rootfile = "";
       QList<QString> images;
-      while (e.readNextStartElement()) {
-            if (e.name() != "container")
-                  e.unknown();
-            while (e.readNextStartElement()) {
-                  if (e.name() != "rootfiles") {
-                        e.unknown();
-                        break;
-                        }
-                  while (e.readNextStartElement()) {
-                        const QStringRef& tag(e.name());
-                        if (tag == "rootfile") {
-                              if (rootfile.isEmpty())
-                                    rootfile = e.attribute("full-path");
-                              e.readNext();
-                              e.readNext();
-                              }
-                        else if (tag == "file")
-                              images.append(e.readElementText());
-                        else
-                              e.unknown();
-                        }
-                  }
-            }
+      QString rootfile = readRootFile(&f, images);
       //
       // load images
       //
@@ -352,9 +339,8 @@ void Workspace::read()
             return;
             }
 
-      ba = f.fileData(rootfile);
-      e.clear();
-      e.addData(ba);
+      QByteArray ba = f.fileData(rootfile);
+      XmlReader e(ba);
 
       while (e.readNextStartElement()) {
             if (e.name() == "museScore") {
@@ -373,7 +359,7 @@ void Workspace::read(XmlReader& e)
       while (e.readNextStartElement()) {
             const QStringRef& tag(e.name());
             if (tag == "name")
-                  _name = e.readElementText();
+                  e.readElementText();
             else if (tag == "PaletteBox") {
                   PaletteBox* paletteBox = mscore->getPaletteBox();
                   paletteBox->clear();
@@ -409,21 +395,24 @@ void Workspace::save()
 QList<Workspace*>& Workspace::workspaces()
       {
       if (!workspacesRead) {
+            _workspaces.append(&_advancedWorkspace);
+            _workspaces.append(&_basicWorkspace);
+
             QStringList path;
             path << mscoreGlobalShare + "workspaces";
             path << dataPath + "/workspaces";
             QStringList nameFilters;
             nameFilters << "*.workspace";
 
-            foreach(QString s, path) {
+            foreach (const QString& s, path) {
                   QDir dir(s);
                   QStringList pl = dir.entryList(nameFilters, QDir::Files, QDir::Name);
 
-                  foreach (QString entry, pl) {
+                  foreach (const QString& entry, pl) {
                         Workspace* p = 0;
                         QFileInfo fi(s + "/" + entry);
                         QString name(fi.baseName());
-                        foreach(Workspace* w, _workspaces) {
+                        foreach (Workspace* w, _workspaces) {
                               if (w->name() == name) {
                                     p = w;
                                     break;
@@ -466,20 +455,5 @@ Workspace* Workspace::createNewWorkspace(const QString& name)
       return p;
       }
 
-//---------------------------------------------------------
-//   writeBuiltinWorkspace
-//---------------------------------------------------------
-
-void Workspace::writeBuiltinWorkspace()
-      {
-      PaletteBox* paletteBox = mscore->getPaletteBox();
-      paletteBox->clear();
-      mscore->populatePalette();
-
-      Workspace ws;
-      ws.setName("advanced");
-      ws.setPath("advanced.workspace");
-      ws.write();
-      }
 }
 

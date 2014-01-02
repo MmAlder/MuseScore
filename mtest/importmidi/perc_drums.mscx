@@ -251,13 +251,13 @@ p, li { white-space: pre-wrap; }
           <duration z="2" n="4"/>
           </Rest>
         </Measure>
-      <Measure number="2">
+      <Measure number="1">
         <Rest>
           <durationType>measure</durationType>
           <duration z="2" n="4"/>
           </Rest>
         </Measure>
-      <Measure number="3">
+      <Measure number="1">
         <Chord>
           <durationType>16th</durationType>
           <StemDirection>up</StemDirection>
@@ -436,7 +436,7 @@ p, li { white-space: pre-wrap; }
         <tick>1920</tick>
         <Chord>
           <track>1</track>
-          <durationType>16th</durationType>
+          <durationType>quarter</durationType>
           <StemDirection>down</StemDirection>
           <Note>
             <track>1</track>
@@ -453,17 +453,9 @@ p, li { white-space: pre-wrap; }
             <veloType>user</veloType>
             </Note>
           </Chord>
-        <Rest>
-          <track>1</track>
-          <durationType>16th</durationType>
-          </Rest>
-        <Rest>
-          <track>1</track>
-          <durationType>eighth</durationType>
-          </Rest>
         <Chord>
           <track>1</track>
-          <durationType>16th</durationType>
+          <durationType>quarter</durationType>
           <StemDirection>down</StemDirection>
           <Note>
             <track>1</track>
@@ -480,16 +472,8 @@ p, li { white-space: pre-wrap; }
             <veloType>user</veloType>
             </Note>
           </Chord>
-        <Rest>
-          <track>1</track>
-          <durationType>16th</durationType>
-          </Rest>
-        <Rest>
-          <track>1</track>
-          <durationType>eighth</durationType>
-          </Rest>
         </Measure>
-      <Measure number="4">
+      <Measure number="1">
         <Chord>
           <durationType>16th</durationType>
           <StemDirection>up</StemDirection>
@@ -668,7 +652,7 @@ p, li { white-space: pre-wrap; }
         <tick>2880</tick>
         <Chord>
           <track>1</track>
-          <durationType>16th</durationType>
+          <durationType>quarter</durationType>
           <StemDirection>down</StemDirection>
           <Note>
             <track>1</track>
@@ -685,17 +669,9 @@ p, li { white-space: pre-wrap; }
             <veloType>user</veloType>
             </Note>
           </Chord>
-        <Rest>
-          <track>1</track>
-          <durationType>16th</durationType>
-          </Rest>
-        <Rest>
-          <track>1</track>
-          <durationType>eighth</durationType>
-          </Rest>
         <Chord>
           <track>1</track>
-          <durationType>16th</durationType>
+          <durationType>quarter</durationType>
           <StemDirection>down</StemDirection>
           <Note>
             <track>1</track>
@@ -712,14 +688,6 @@ p, li { white-space: pre-wrap; }
             <veloType>user</veloType>
             </Note>
           </Chord>
-        <Rest>
-          <track>1</track>
-          <durationType>16th</durationType>
-          </Rest>
-        <Rest>
-          <track>1</track>
-          <durationType>eighth</durationType>
-          </Rest>
         </Measure>
       </Staff>
     </Score>

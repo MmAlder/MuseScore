@@ -734,13 +734,14 @@ class ChangeStaff : public UndoCommand {
       bool        small;
       bool        invisible;
       qreal       userDist;
+      QColor      color;
       StaffType*  staffType;
 
       void flip();
 
    public:
-      ChangeStaff(Staff*, bool small, bool invisible, qreal userDist, StaffType*);
-      UNDO_NAME("ChangeStaff");
+      ChangeStaff(Staff*, bool small, bool invisible, qreal userDist, QColor _color, StaffType*);
+      UNDO_NAME("ChangeStaff")
       };
 
 //---------------------------------------------------------
@@ -833,6 +834,22 @@ class ChangeStyle : public UndoCommand {
    public:
       ChangeStyle(Score*, const MStyle&);
       UNDO_NAME("ChangeStyle");
+      };
+
+//---------------------------------------------------------
+//   ChangeStyleVal
+//---------------------------------------------------------
+
+class ChangeStyleVal : public UndoCommand {
+      Score* score;
+      StyleIdx idx;
+      QVariant value;
+
+      void flip();
+
+   public:
+      ChangeStyleVal(Score* s, StyleIdx i, const QVariant& v) : score(s), idx(i), value(v) {}
+      UNDO_NAME("ChangeStyleVal");
       };
 
 //---------------------------------------------------------
@@ -1307,6 +1324,55 @@ class ChangeSpannerElements : public UndoCommand {
       ChangeSpannerElements(Spanner* s, Element* se, Element* ee)
          : spanner(s), startElement(se), endElement(ee) {}
       UNDO_NAME("ChangeSpannerElements");
+      };
+
+//---------------------------------------------------------
+//   ChangeParent
+//---------------------------------------------------------
+
+class ChangeParent : public UndoCommand {
+      Element* element;
+      Element* parent;
+      int staffIdx;
+
+      void flip();
+
+   public:
+      ChangeParent(Element* e, Element* p, int si) : element(e), parent(p), staffIdx(si) {}
+      UNDO_NAME("ChangeParent");
+      };
+
+//---------------------------------------------------------
+//   ChangeMMRest
+//---------------------------------------------------------
+
+class ChangeMMRest : public UndoCommand {
+      Measure* m;
+      Measure* mmrest;
+
+      void flip();
+
+   public:
+      ChangeMMRest(Measure* _m, Measure* _mmr) : m(_m), mmrest(_mmr) {}
+      UNDO_NAME("ChangeMMRest");
+      };
+
+//---------------------------------------------------------
+//   InsertTime
+//---------------------------------------------------------
+
+class InsertTime : public UndoCommand {
+      Score* score;
+      int tick;
+      int len;
+
+      void redo();
+      void undo();
+
+   public:
+      InsertTime(Score* _score, int _tick, int _len) :
+            score(_score), tick(_tick), len(_len) {}
+      UNDO_NAME("InsertTime");
       };
 
 }     // namespace Ms

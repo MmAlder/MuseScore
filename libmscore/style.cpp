@@ -117,6 +117,7 @@ static const StyleTypes2 styleTypes2[] = {
       { ST_harmonyY,                    StyleType("harmonyY",                ST_SPATIUM) },
       { ST_harmonyFretDist,             StyleType("harmonyFretDist",         ST_SPATIUM) },
       { ST_minHarmonyDistance,          StyleType("minHarmonyDistance",      ST_SPATIUM) },
+      { ST_capoPosition,                StyleType("capoPosition",            ST_INT) },
       { ST_showPageNumber,              StyleType("showPageNumber",          ST_BOOL) },
       { ST_showPageNumberOne,           StyleType("showPageNumberOne",       ST_BOOL) },
       { ST_pageNumberOddEven,           StyleType("pageNumberOddEven",       ST_BOOL) },
@@ -263,11 +264,11 @@ void initStyle(MStyle* s)
          ALIGN_LEFT | ALIGN_BASELINE, QPointF(MM(1), MM(-2)), OA, QPointF(0.0, 100.0)));
 
       AS(TextStyle(
-         TR("Lyrics odd lines"), ff, 11, false, false, false,
+         TR("Lyrics Odd Lines"), ff, 11, false, false, false,
          ALIGN_HCENTER | ALIGN_BASELINE, QPointF(0, 7), OS, QPointF(), true));
 
       AS(TextStyle(
-         TR("Lyrics even lines"), ff, 11, false, false, false,
+         TR("Lyrics Even Lines"), ff, 11, false, false, false,
          ALIGN_HCENTER | ALIGN_BASELINE, QPointF(0, 7), OS, QPointF(), true));
 
       AS(TextStyle(
@@ -275,15 +276,15 @@ void initStyle(MStyle* s)
          ALIGN_CENTER, QPointF(), OA, QPointF(), true));
 
       AS(TextStyle(
-         TR( "InstrumentsLong"),   ff, 12, false, false, false,
+         TR( "Instrument Name (Long)"),   ff, 12, false, false, false,
          ALIGN_RIGHT | ALIGN_VCENTER, QPointF(), OA, QPointF(), true));
 
       AS(TextStyle(
-         TR( "InstrumentsShort"),   ff, 12, false, false, false,
+         TR( "Instrument Name (Short)"),   ff, 12, false, false, false,
          ALIGN_RIGHT | ALIGN_VCENTER, QPointF(), OA, QPointF(), true));
 
       AS(TextStyle(
-         TR( "InstrumentsExcerpt"), ff, 18, false, false, false,
+         TR( "Instrument Name (Part)"), ff, 18, false, false, false,
          ALIGN_LEFT | ALIGN_TOP, QPointF(), OA, QPointF()));
 
       AS(TextStyle(
@@ -293,7 +294,7 @@ void initStyle(MStyle* s)
          ALIGN_HCENTER | ALIGN_BASELINE, QPointF(0.0, 8.0), OS, QPointF(), true));
 
       AS(TextStyle(
-         TR( "Technik"), ff, 12, false, true, false,
+         TR( "Technique"), ff, 12, false, true, false,
          ALIGN_LEFT | ALIGN_BASELINE, QPointF(0.0, -2.0), OS));
 
       AS(TextStyle(
@@ -313,7 +314,7 @@ void initStyle(MStyle* s)
          ALIGN_HCENTER | ALIGN_TOP, QPointF(0, 6)));
 
       AS(TextStyle(
-         TR( "Tuplets"), ff,  10, false, true, false,
+         TR( "Tuplet"), ff,  10, false, true, false,
          ALIGN_CENTER, QPointF(), OA, QPointF(), true));
 
       AS(TextStyle(
@@ -326,7 +327,7 @@ void initStyle(MStyle* s)
          ALIGN_LEFT, QPointF(0, -4.0), OS, QPointF(), true));
 
       AS(TextStyle(
-         TR( "Chordname"), ff,  12, false, false, false,
+         TR( "Chord Symbol"), ff,  12, false, false, false,
          ALIGN_LEFT | ALIGN_BASELINE, QPointF(), OS, QPointF(), true));
 
       AS(TextStyle(
@@ -358,7 +359,7 @@ void initStyle(MStyle* s)
          TR( "Frame"), ff, 12, false, false, false, ALIGN_LEFT | ALIGN_TOP));
 
       AS(TextStyle(
-         TR( "TextLine"), ff,  12, false, false, false,
+         TR( "Text Line"), ff,  12, false, false, false,
          ALIGN_LEFT | ALIGN_VCENTER, QPointF(), OS, QPointF(), true));
 
       AS(TextStyle(
@@ -495,6 +496,7 @@ StyleData::StyleData()
             { ST_harmonyY,                    QVariant(-2.5) },
             { ST_harmonyFretDist,             QVariant(-1.5) },
             { ST_minHarmonyDistance,          QVariant(0.5) },
+            { ST_capoPosition,                QVariant(0) },
             { ST_showPageNumber,              QVariant(true) },
             { ST_showPageNumberOne,           QVariant(false) },
             { ST_pageNumberOddEven,           QVariant(true) },
@@ -597,14 +599,14 @@ StyleData::StyleData()
       _articulationAnchor[Articulation_Verylongfermata] = A_TOP_STAFF;
       _articulationAnchor[Articulation_Thumb]           = A_CHORD;
       _articulationAnchor[Articulation_Sforzatoaccent]  = A_CHORD;
-      _articulationAnchor[Articulation_Espressivo]      = A_CHORD;
+//      _articulationAnchor[Articulation_Espressivo]      = A_CHORD;
       _articulationAnchor[Articulation_Staccato]        = A_CHORD;
       _articulationAnchor[Articulation_Staccatissimo]   = A_CHORD;
       _articulationAnchor[Articulation_Tenuto]          = A_CHORD;
       _articulationAnchor[Articulation_Portato]         = A_CHORD;
       _articulationAnchor[Articulation_Marcato]         = A_CHORD;
-      _articulationAnchor[Articulation_Ouvert]          = A_CHORD;
-      _articulationAnchor[Articulation_Plusstop]        = A_CHORD;
+//      _articulationAnchor[Articulation_Ouvert]          = A_CHORD;
+//      _articulationAnchor[Articulation_Plusstop]        = A_CHORD;
       _articulationAnchor[Articulation_Upbow]           = A_TOP_STAFF;
       _articulationAnchor[Articulation_Downbow]         = A_TOP_STAFF;
       _articulationAnchor[Articulation_Reverseturn]     = A_TOP_STAFF;
@@ -622,10 +624,10 @@ StyleData::StyleData()
       _articulationAnchor[Articulation_PrallUp]         = A_TOP_STAFF;
       _articulationAnchor[Articulation_LinePrall]       = A_TOP_STAFF;
       _articulationAnchor[Articulation_Schleifer]       = A_TOP_STAFF;
-      _articulationAnchor[Articulation_Snappizzicato]   = A_TOP_STAFF;
-      _articulationAnchor[Articulation_Tapping]         = A_TOP_STAFF;
-      _articulationAnchor[Articulation_Slapping]        = A_TOP_STAFF;
-      _articulationAnchor[Articulation_Popping]         = A_TOP_STAFF;
+//      _articulationAnchor[Articulation_Snappizzicato]   = A_TOP_STAFF;
+//      _articulationAnchor[Articulation_Tapping]         = A_TOP_STAFF;
+//      _articulationAnchor[Articulation_Slapping]        = A_TOP_STAFF;
+//      _articulationAnchor[Articulation_Popping]         = A_TOP_STAFF;
       _spatium = SPATIUM20 * MScore::DPI;
       };
 
@@ -638,7 +640,7 @@ StyleData::StyleData(const StyleData& s)
       _textStyles      = s._textStyles;
       _pageFormat.copy(s._pageFormat);
       _spatium         = s._spatium;
-      for (int i = 0; i < ARTICULATIONS; ++i)
+      for (int i = 0; i < (int)ARTICULATIONS; ++i)
             _articulationAnchor[i] = s._articulationAnchor[i];
       }
 
@@ -1079,8 +1081,8 @@ bool StyleData::isDefault(StyleIdx idx) const
 
 //---------------------------------------------------------
 //   save
-//    if optimize is true, save only if different to default
-//    style
+//    if optimize is true, save only data which are different
+//    from built-in style ( MScore::baseStyle() )
 //---------------------------------------------------------
 
 void StyleData::save(Xml& xml, bool optimize) const
@@ -1101,7 +1103,7 @@ void StyleData::save(Xml& xml, bool optimize) const
                   }
             }
       for (int i = 0; i < TEXT_STYLES; ++i) {
-            if (!optimize || _textStyles[i] != MScore::defaultStyle()->textStyle(i))
+            if (!optimize || _textStyles[i] != MScore::baseStyle()->textStyle(i))
                   _textStyles[i].write(xml);
             }
       for (int i = TEXT_STYLES; i < _textStyles.size(); ++i)
@@ -1112,7 +1114,7 @@ void StyleData::save(Xml& xml, bool optimize) const
             xml.etag();
             }
       for (int i = 0; i < ARTICULATIONS; ++i) {
-            if (optimize && _articulationAnchor[i] == MScore::defaultStyle()->articulationAnchor(i))
+            if (optimize && _articulationAnchor[i] == MScore::baseStyle()->articulationAnchor(i))
                   continue;
             const ArticulationInfo& ai = Articulation::articulationList[i];
             xml.tag(ai.name + "Anchor", int(_articulationAnchor[i]));

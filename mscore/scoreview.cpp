@@ -55,7 +55,7 @@
 #include "libmscore/slur.h"
 #include "libmscore/harmony.h"
 #include "libmscore/navigate.h"
-#include "libmscore/tablature.h"
+#include "libmscore/stringdata.h"
 #include "libmscore/shadownote.h"
 #include "libmscore/sym.h"
 #include "libmscore/lasso.h"
@@ -65,9 +65,11 @@
 #include "libmscore/clef.h"
 #include "scoretab.h"
 #include "measureproperties.h"
+#include "textcursor.h"
+#include "navigator.h"
+
 #include "libmscore/pitchspelling.h"
 #include "libmscore/notedot.h"
-
 #include "libmscore/articulation.h"
 #include "libmscore/tuplet.h"
 #include "libmscore/stafftext.h"
@@ -78,7 +80,6 @@
 #include "libmscore/excerpt.h"
 #include "libmscore/stafftype.h"
 
-#include "navigator.h"
 #include "inspector/inspector.h"
 
 namespace Ms {
@@ -240,7 +241,8 @@ class SeekTransition : public QMouseEventTransition
             return false;
             }
       virtual void onTransition(QEvent*) {
-            seq->seek(cr->tick());
+            if (seq)
+                  seq->seek(cr->tick());
             canvas->setCursorVisible(true);
             }
    public:
@@ -652,22 +654,18 @@ ScoreView::ScoreView(QWidget* parent)
       lasso       = new Lasso(_score);
       _foto       = new Lasso(_score);
 
-      _cursor     = new TextCursor;
+      _cursor     = new TextCursor(this);
+      _cursor->setType(CursorType::POS);
+
       shadowNote  = 0;
       grips       = 0;
       editObject  = 0;
       addSelect   = false;
 
-      _curLoopIn  = new TextCursor;
-      QColor cIn(Qt::green);
-      cIn.setAlpha(80);
-      _curLoopIn->setColor(cIn);
-      _curLoopIn->setTick(-1);
-      _curLoopOut = new TextCursor;
-      QColor cOut(Qt::red);
-      cOut.setAlpha(80);
-      _curLoopOut->setColor(cOut);
-      _curLoopOut->setTick(-1);
+      _curLoopIn  = new TextCursor(this);
+      _curLoopIn->setType(CursorType::LOOP_IN);
+      _curLoopOut = new TextCursor(this);
+      _curLoopOut->setType(CursorType::LOOP_OUT);
 
       //---setup state machine-------------------------------------------------
       sm          = new QStateMachine(this);
@@ -829,52 +827,54 @@ ScoreView::ScoreView(QWidget* parent)
       s->addTransition(new DragTransition(this));
 
       //----------------------setup play state
-      s = states[PLAY];
-      // s->assignProperty(this, "cursor", QCursor(Qt::ArrowCursor));
-      s->addTransition(new CommandTransition("play", states[NORMAL]));
-      s->addTransition(new CommandTransition("escape", states[NORMAL]));
-      s->addTransition(new SeekTransition(this, states[PLAY]));
-      QSignalTransition* st = new QSignalTransition(seq, SIGNAL(stopped()));
-      st->setTargetState(states[NORMAL]);
-      s->addTransition(st);
-      connect(s, SIGNAL(entered()), mscore, SLOT(setPlayState()));
-      connect(s, SIGNAL(entered()), seq, SLOT(start()));
-      connect(s, SIGNAL(exited()),  seq, SLOT(stop()));
+      if (seq) {
+            s = states[PLAY];
+            // s->assignProperty(this, "cursor", QCursor(Qt::ArrowCursor));
+            s->addTransition(new CommandTransition("play", states[NORMAL]));
+            s->addTransition(new CommandTransition("escape", states[NORMAL]));
+            s->addTransition(new SeekTransition(this, states[PLAY]));
+            QSignalTransition* st = new QSignalTransition(seq, SIGNAL(stopped()));
+            st->setTargetState(states[NORMAL]);
+            s->addTransition(st);
+            connect(s, SIGNAL(entered()), mscore, SLOT(setPlayState()));
+            connect(s, SIGNAL(entered()), seq, SLOT(start()));
+            connect(s, SIGNAL(exited()),  seq, SLOT(stop()));
 
-      QState* s1 = new QState(s);
-      s1->setObjectName("play-normal");
-      connect(s1, SIGNAL(entered()), SLOT(enterState()));
-      connect(s1, SIGNAL(exited()), SLOT(exitState()));
-      QState* s2 = new QState(s);
-      connect(s2, SIGNAL(entered()), SLOT(enterState()));
-      connect(s2, SIGNAL(exited()), SLOT(exitState()));
-      s2->setObjectName("play-drag");
+            QState* s1 = new QState(s);
+            s1->setObjectName("play-normal");
+            connect(s1, SIGNAL(entered()), SLOT(enterState()));
+            connect(s1, SIGNAL(exited()), SLOT(exitState()));
+            QState* s2 = new QState(s);
+            connect(s2, SIGNAL(entered()), SLOT(enterState()));
+            connect(s2, SIGNAL(exited()), SLOT(exitState()));
+            s2->setObjectName("play-drag");
 
-      s1->assignProperty(this, "cursor", QCursor(Qt::ArrowCursor));
-      s1->addTransition(new ScoreViewDragTransition(this, s2));      // ->stateDrag
+            s1->assignProperty(this, "cursor", QCursor(Qt::ArrowCursor));
+            s1->addTransition(new ScoreViewDragTransition(this, s2));      // ->stateDrag
 
-      // drag during play state
-      s2->assignProperty(this, "cursor", QCursor(Qt::SizeAllCursor));
-      cl = new QEventTransition(this, QEvent::MouseButtonRelease);
-      cl->setTargetState(s1);
-      s2->addTransition(cl);
-      connect(s2, SIGNAL(entered()), SLOT(deselectAll()));
-      s2->addTransition(new DragTransition(this));
+            // drag during play state
+            s2->assignProperty(this, "cursor", QCursor(Qt::SizeAllCursor));
+            cl = new QEventTransition(this, QEvent::MouseButtonRelease);
+            cl->setTargetState(s1);
+            s2->addTransition(cl);
+            connect(s2, SIGNAL(entered()), SLOT(deselectAll()));
+            s2->addTransition(new DragTransition(this));
 
-      s->setInitialState(s1);
-      s->addTransition(new ScoreViewDragTransition(this, s2));
+            s->setInitialState(s1);
+            s->addTransition(new ScoreViewDragTransition(this, s2));
 
-      // setup editPlay state
-      s = states[ENTRY_PLAY];
-      s->assignProperty(this, "cursor", QCursor(Qt::ArrowCursor));
-      s->addTransition(new CommandTransition("play", states[NOTE_ENTRY]));
-      s->addTransition(new CommandTransition("escape", states[NOTE_ENTRY]));
-      st = new QSignalTransition(seq, SIGNAL(stopped()));
-      st->setTargetState(states[NOTE_ENTRY]);
-      s->addTransition(st);
-      connect(s, SIGNAL(entered()), mscore, SLOT(setPlayState()));
-      connect(s, SIGNAL(entered()), seq, SLOT(start()));
-      connect(s, SIGNAL(exited()),  seq, SLOT(stop()));
+            // setup editPlay state
+            s = states[ENTRY_PLAY];
+            s->assignProperty(this, "cursor", QCursor(Qt::ArrowCursor));
+            s->addTransition(new CommandTransition("play", states[NOTE_ENTRY]));
+            s->addTransition(new CommandTransition("escape", states[NOTE_ENTRY]));
+            st = new QSignalTransition(seq, SIGNAL(stopped()));
+            st->setTargetState(states[NOTE_ENTRY]);
+            s->addTransition(st);
+            connect(s, SIGNAL(entered()), mscore, SLOT(setPlayState()));
+            connect(s, SIGNAL(entered()), seq, SLOT(start()));
+            connect(s, SIGNAL(exited()),  seq, SLOT(stop()));
+            }
 
       setupFotoMode();
 
@@ -905,6 +905,8 @@ ScoreView::ScoreView(QWidget* parent)
                   qDebug("no valid pixmap %s", qPrintable(preferences.fgWallpaper));
             setForeground(pm);
             }
+
+      connect(getAction("loop"), SIGNAL(toggled(bool)), SLOT(loopToggled(bool)));
       }
 
 //---------------------------------------------------------
@@ -913,8 +915,10 @@ ScoreView::ScoreView(QWidget* parent)
 
 void ScoreView::setScore(Score* s)
       {
-      if (_score)
+      if (_score) {
             _score->removeViewer(this);
+            disconnect(s, SIGNAL(posChanged(POS, int)), this, SLOT(posChanged(POS,int)));
+            }
 
       _score = s;
       _score->addViewer(this);
@@ -928,6 +932,11 @@ void ScoreView::setScore(Score* s)
       lasso->setScore(s);
       _foto->setScore(s);
       if (s) {
+            _curLoopIn->move(s->pos(POS::LEFT));
+            _curLoopOut->move(s->pos(POS::RIGHT));
+            loopToggled(getAction("loop")->isChecked());
+
+            connect(s, SIGNAL(posChanged(POS,unsigned)), SLOT(posChanged(POS,unsigned)));
             s->setLayoutMode(LayoutPage);
             s->setLayoutAll(true);
             s->update();
@@ -989,6 +998,9 @@ void ScoreView::objectPopup(const QPoint& pos, Element* obj)
       createElementPropertyMenu(obj, popup);
 
       popup->addSeparator();
+      a = popup->addAction(tr("Help"));
+      popup->addSeparator();
+      a->setData("help");
       a = popup->addAction(tr("Debugger"));
       a->setData("list");
       a = popup->exec(pos);
@@ -1001,6 +1013,8 @@ void ScoreView::objectPopup(const QPoint& pos, Element* obj)
             }
       if (cmd == "list")
             mscore->showElementContext(obj);
+      else if (cmd == "help")
+            mscore->helpBrowser(obj->name());
       else if (cmd == "edit") {
             if (obj->isEditable()) {
                   startEdit(obj);
@@ -1032,7 +1046,7 @@ void ScoreView::measurePopup(const QPoint& gpos, Measure* obj)
       Segment* seg;
       QPointF offset;
 
-      if (!_score->pos2measure(startMove, &staffIdx, &pitch, &seg, &offset))
+      if (!_score->pos2measure(data.startMove, &staffIdx, &pitch, &seg, &offset))
             return;
       if (staffIdx == -1) {
             qDebug("ScoreView::measurePopup: staffIdx == -1!");
@@ -1265,20 +1279,10 @@ void ScoreView::updateAll()
 
 void ScoreView::moveCursor(int tick)
       {
-      Measure* measure = score()->tick2measure(tick);
+      Measure* measure = score()->tick2measureMM(tick);
       if (measure == 0)
             return;
       int offset = 0;
-      if(measure->multiMeasure() < 0) {//skipped
-            while(measure) {
-                  measure = measure->prevMeasure();
-                  offset += measure->ticks();
-                  if (measure->multiMeasure() > 0)
-                        break;
-                  }
-            }
-      if (measure == 0)
-            return;
 
       qreal x;
       Segment* s;
@@ -1328,7 +1332,7 @@ void ScoreView::moveCursor(int tick)
       update(_matrix.mapRect(_cursor->rect()).toRect().adjusted(-1,-1,1,1));
 
       qreal mag = _spatium / (MScore::DPI * SPATIUM20);
-      double w  = _spatium * 2.0 + symbols[score()->symIdx()][quartheadSym].width(mag);
+      double w  = _spatium * 2.0 + score()->scoreFont()->width(SymId::noteheadBlack, mag);
       double h  = 6 * _spatium;
       //
       // set cursor height for whole system
@@ -1353,17 +1357,24 @@ void ScoreView::moveCursor(int tick)
 
 //---------------------------------------------------------
 //   moveCursor
+//    move cursor in note input mode
 //---------------------------------------------------------
 
 void ScoreView::moveCursor()
       {
       const InputState& is = _score->inputState();
-      int track = is.track() == -1 ? 0 : is.track();
       Segment* segment = is.segment();
+      if (segment && score()->styleB(ST_createMultiMeasureRests) && segment->measure()->hasMMRest()) {
+            Measure* m = segment->measure()->mmRest();
+            segment = m->findSegment(Segment::SegChordRest, m->tick());
+            }
       if (!segment)
             return;
 
-      int voice = track == -1 ? 0 : track % VOICES;
+      int track    = is.track() == -1 ? 0 : is.track();
+      int voice    = track % VOICES;
+      int staffIdx = track / VOICES;
+
       QColor c(MScore::selectColor[voice]);
       c.setAlpha(50);
       _cursor->setColor(c);
@@ -1372,10 +1383,9 @@ void ScoreView::moveCursor()
       System* system = segment->measure()->system();
       if (system == 0) {
             // a new measure was appended but no layout took place
-            qDebug("zero SYSTEM");
+            // or this measure was skipped by a multi measure rest
             return;
             }
-      int staffIdx    = track == -1 ? 0 : track / VOICES;
       double x        = segment->canvasPos().x();
       double y        = system->staffYpage(staffIdx) + system->page()->pos().y();
       double _spatium = score()->spatium();
@@ -1383,46 +1393,26 @@ void ScoreView::moveCursor()
       update(_matrix.mapRect(_cursor->rect()).toRect().adjusted(-1,-1,1,1));
 
       double h;
-      qreal mag = _spatium / (MScore::DPI * SPATIUM20);
-      double w  = _spatium * 2.0 + symbols[score()->symIdx()][quartheadSym].width(mag);
-
-      if (track == -1) {
-            h  = 6 * _spatium;
-            //
-            // set cursor height for whole system
-            //
-            double y2 = 0.0;
-            for (int i = 0; i < _score->nstaves(); ++i) {
-                  SysStaff* ss = system->staff(i);
-                  if (!ss->show())
-                        continue;
-                  y2 = ss->y();
-                  }
-            h += y2;
-            x -= _spatium;
-            y -= _spatium;
+      qreal mag       = _spatium / (MScore::DPI * SPATIUM20);
+      double w        = _spatium * 2.0 + score()->scoreFont()->width(SymId::noteheadBlack, mag);
+      Staff* staff    = _score->staff(staffIdx);
+      double lineDist = staff->staffType()->lineDistance().val() * _spatium;
+      int lines       = staff->lines();
+      int strg        = is.string();
+      x              -= _spatium;
+      // if on a TAB staff and InputState::_string makes sense,
+      // draw cursor around single string
+      if (staff->isTabStaff() && strg > VISUAL_STRING_NONE && strg < lines) {
+            h = lineDist * 1.5;       // 1 space above strg for letters and 1/2 sp. below strg for numbers
+            y += lineDist * (strg-1); // star 1 sp. above strg to include letter position
             }
+      // otherwise, draw cursor across whole staff
       else {
-            Staff* staff    = _score->staff(staffIdx);
-            double lineDist = staff->staffType()->lineDistance().val() * _spatium;
-            int lines       = staff->lines();
-            int strg        = _score->inputState().string();
-            x              -= _spatium;
-            // if on a TAB staff and InputState::_string makes sense,
-            // draw cursor around single string
-            if(staff->isTabStaff() && strg > VISUAL_STRING_NONE && strg < lines) {
-                  h         = lineDist * 1.5;         // 1 space above strg for letters and 1/2 sp. below strg for numbers
-                  y        += lineDist * (strg-1);    // star 1 sp. above strg to include letter position
-                  }
-            // otherwise, draw cursor across whole staff
-            else {
-                  h         = (lines - 1) * lineDist + 4 * _spatium;
-                  y        -= 2.0 * _spatium;
-                  }
+            h = (lines - 1) * lineDist + 4 * _spatium;
+            y -= 2.0 * _spatium;
             }
       _cursor->setRect(QRectF(x, y, w, h));
       update(_matrix.mapRect(_cursor->rect()).toRect().adjusted(-1,-1,1,1));
-      update();   //DEBUG
       }
 
 //---------------------------------------------------------
@@ -1454,7 +1444,6 @@ void ScoreView::setCursorOn(bool val)
 
 void ScoreView::setLoopCursor(TextCursor *curLoop, int tick, bool isInPos)
       {
-//      qDebug ("setLoopCursor :  tick=%d, isInPos=%d",tick, isInPos);
       //
       // set mark height for whole system
       //
@@ -1463,16 +1452,6 @@ void ScoreView::setLoopCursor(TextCursor *curLoop, int tick, bool isInPos)
             return;
       qreal x;
       int offset = 0;
-      if (measure->multiMeasure() < 0) {//skipped
-            while(measure) {
-                  measure = measure->prevMeasure();
-                  offset += measure->ticks();
-                  if (measure->multiMeasure() > 0)
-                        break;
-                  }
-            }
-      if (measure == 0)
-            return;
 
       Segment* s;
       for (s = measure->first(Segment::SegChordRest); s;) {
@@ -1509,7 +1488,7 @@ void ScoreView::setLoopCursor(TextCursor *curLoop, int tick, bool isInPos)
       double _spatium = score()->spatium();
 
       qreal mag = _spatium / (MScore::DPI * SPATIUM20);
-      double w  = (_spatium * 2.0 + symbols[score()->symIdx()][quartheadSym].width(mag))/3;
+      double w  = (_spatium * 2.0 + score()->scoreFont()->width(SymId::noteheadBlack, mag))/3;
       double h  = 6 * _spatium;
       //
       // set cursor height for whole system
@@ -1532,74 +1511,9 @@ void ScoreView::setLoopCursor(TextCursor *curLoop, int tick, bool isInPos)
             x = x - _spatium;
             }
       curLoop->setTick(tick);
+      update(_matrix.mapRect(curLoop->rect()).toRect().adjusted(-1,-1,1,1));
       curLoop->setRect(QRectF(x, y, w, h));
       update(_matrix.mapRect(curLoop->rect()).toRect().adjusted(-1,-1,1,1));
-      }
-
-//---------------------------------------------------------
-//   setLoopInCursor
-//    adjust the cursor shape and position to mark the beginning of the loop
-//---------------------------------------------------------
-
-void ScoreView::setLoopInCursor()
-      {
-      if (_score->loopInTick() < 0)
-            _score->setLoopInTick(-1);
-      setLoopCursor(_curLoopIn, _score->loopInTick(), true);
-      update();
-      }
-
-//---------------------------------------------------------
-//   setLoopOutCursor
-//    adjust the cursor shape and position to mark the end of the loop
-//---------------------------------------------------------
-
-void ScoreView::setLoopOutCursor()
-      {
-      if (_score->loopOutTick() < 0)
-            _score->setLoopOutTick(-1);
-      setLoopCursor(_curLoopOut, _score->loopOutTick(),false);
-      update();
-      }
-
-//---------------------------------------------------------
-//   updateLoopCursors
-//    update loop cursors Y and Y position (for example when changing view mode)
-//---------------------------------------------------------
-
-void ScoreView::updateLoopCursors()
-      {
-      setLoopInCursor();    // In pos
-      setLoopOutCursor();   // Out pos
-      }
-
-//---------------------------------------------------------
-//   showLoopCursors
-//    show the In/Out marks for the loop
-//---------------------------------------------------------
-
-void ScoreView::showLoopCursors()
-      {
-      if (_curLoopIn->tick() < 0)
-            setLoopInCursor();
-      if (_curLoopOut->tick() < 0)
-            setLoopOutCursor();
-      _curLoopIn->setVisible(true);
-      _curLoopOut->setVisible(true);
-      //qDebug("====  Show loop in tick = %d",_curLoopIn->tick());
-      update();
-      }
-
-//---------------------------------------------------------
-//   hideLoopCursors
-//    hide the In/Out marks for the loop
-//---------------------------------------------------------
-
-void ScoreView::hideLoopCursors()
-      {
-      _curLoopIn->setVisible(false);
-      _curLoopOut->setVisible(false);
-      update();
       }
 
 //---------------------------------------------------------
@@ -1608,8 +1522,9 @@ void ScoreView::hideLoopCursors()
 
 void ScoreView::setShadowNote(const QPointF& p)
       {
+      const InputState& is = _score->inputState();
       Position pos;
-      if (!score()->getPosition(&pos, p, score()->inputState().voice())) {
+      if (!score()->getPosition(&pos, p, is.voice())) {
             shadowNote->setVisible(false);
             return;
             }
@@ -1617,32 +1532,30 @@ void ScoreView::setShadowNote(const QPointF& p)
       shadowNote->setVisible(true);
       Staff* staff      = score()->staff(pos.staffIdx);
       shadowNote->setMag(staff->mag());
-      const Instrument* instr = staff->part()->instr();
-      int noteheadGroup = 0;
-      int line          = pos.line;
-      int noteHead      = score()->inputState().duration().headType();
+      const Instrument* instr     = staff->part()->instr();
+      NoteHeadGroup noteheadGroup = NoteHeadGroup::HEAD_NORMAL;
+      int line                    = pos.line;
+      NoteHeadType noteHead       = is.duration().headType();
 
       if (instr->useDrumset()) {
             Drumset* ds  = instr->drumset();
-            int pitch    = score()->inputState().drumNote();
+            int pitch    = is.drumNote();
             if (pitch >= 0 && ds->isValid(pitch)) {
                   line     = ds->line(pitch);
                   noteheadGroup = ds->noteHead(pitch);
                   }
             }
       shadowNote->setLine(line);
-      Sym* s;
-      if (score()->inputState().rest) {
+      SymId s;
+      if (is.rest()) {
             int yo;
-            TDuration d(score()->inputState().duration());
+            TDuration d(is.duration());
             Rest rest(gscore, d.type());
             rest.setDuration(d.fraction());
-            int id = rest.getSymbol(score()->inputState().duration().type(), 0,
-               staff->lines(), &yo);
-            s = &symbols[0][id];
+            s = rest.getSymbol(is.duration().type(), 0, staff->lines(), &yo);
             }
       else
-            s = noteHeadSym(true, noteheadGroup, noteHead);
+            s = Note::noteHead(0, noteheadGroup, noteHead);
       shadowNote->setSym(s);
       shadowNote->layout();
       shadowNote->setPos(pos.pos);
@@ -1680,13 +1593,9 @@ void ScoreView::paintEvent(QPaintEvent* ev)
       vp.setTransform(_matrix);
       vp.setClipping(false);
 
-      if (_curLoopIn && _curLoopIn->visible())
-            vp.fillRect(_curLoopIn->rect(), _curLoopIn->color());
-      if (_curLoopOut && _curLoopOut->visible())
-            vp.fillRect(_curLoopOut->rect(), _curLoopOut->color());
-
-      if (_cursor && _cursor->visible())
-            vp.fillRect(_cursor->rect(), _cursor->color());
+      _curLoopIn->paint(&vp);
+      _curLoopOut->paint(&vp);
+      _cursor->paint(&vp);
 
       lasso->draw(&vp);
       if (fotoMode())
@@ -1963,7 +1872,7 @@ void ScoreView::paint(const QRect& r, QPainter& p)
             double x1;
 
             for (Segment* s = ss; s && (s != es);) {
-                  Segment* ns = s->next1();
+                  Segment* ns = s->next1MM();
                   system1  = system2;
                   system2  = s->measure()->system();
                   pt       = s->pagePos();
@@ -2060,7 +1969,6 @@ void ScoreView::zoom(qreal _mag, const QPointF& pos)
       update();
       }
 
-#if QT_VERSION < 0x050000
 //---------------------------------------------------------
 //   gestureEvent
 //---------------------------------------------------------
@@ -2083,7 +1991,6 @@ bool ScoreView::gestureEvent(QGestureEvent *event)
             }
       return true;
       }
-#endif
 
 //---------------------------------------------------------
 //   wheelEvent
@@ -2509,21 +2416,23 @@ void ScoreView::normalPaste()
 
             if (type != Element::INVALID) {
                   Element* el = Element::create(type, _score);
-                  el->read(e);
                   if (el) {
-                        for (Element* target : els) {
-                              Element* nel = el->clone();
-                              _score->addRefresh(target->abbox());   // layout() ?!
-                              DropData ddata;
-                              ddata.view       = this;
-                              ddata.element    = nel;
-                              ddata.duration   = duration;
-                              target->drop(ddata);
-                              if (_score->selection().element())
-                                    _score->addRefresh(_score->selection().element()->abbox());
+                        el->read(e);
+                        if (el) {
+                              for (Element* target : els) {
+                                    Element* nel = el->clone();
+                                    _score->addRefresh(target->abbox());   // layout() ?!
+                                    DropData ddata;
+                                    ddata.view       = this;
+                                    ddata.element    = nel;
+                                    ddata.duration   = duration;
+                                    target->drop(ddata);
+                                    if (_score->selection().element())
+                                          _score->addRefresh(_score->selection().element()->abbox());
+                                    }
                               }
+                              delete el;
                         }
-                        delete el;
                   }
             else
                   qDebug("cannot read type");
@@ -2554,8 +2463,38 @@ void ScoreView::normalPaste()
                   _score->pasteStaff(e, cr);
                   }
             }
-      else if (ms->hasFormat(mimeSymbolListFormat) && _score->selection().isSingle())
-            errorMessage->showMessage(tr("cannot paste symbol list to element"), "pasteSymbollist");
+
+
+      else if (ms->hasFormat(mimeSymbolListFormat)) {
+            ChordRest* cr = 0;
+            if (_score->selection().state() == SEL_RANGE)
+                  cr = _score->selection().firstChordRest();
+            else if (_score->selection().isSingle()) {
+                  Element* e = _score->selection().element();
+                  if (e->type() != Element::NOTE && e->type() != Element::REST) {
+                        qDebug("cannot paste to %s", e->name());
+                        return;
+                        }
+                  if (e->type() == Element::NOTE)
+                        e = static_cast<Note*>(e)->chord();
+                  cr  = static_cast<ChordRest*>(e);
+                  }
+            if (cr == 0)
+                  errorMessage->showMessage(tr("no destination to paste"), "pasteDestination");
+            else if (cr->tuplet())
+                  errorMessage->showMessage(tr("cannot paste into tuplet"), "pasteTuplet");
+            else {
+                  QByteArray data(ms->data(mimeSymbolListFormat));
+                  qDebug("paste <%s>", data.data());
+                  XmlReader e(data);
+//            QPointF dragOffset;
+//            Fraction duration(1, 4);
+//            Element::ElementType type = Element::readType(e, &dragOffset, &duration);
+                  _score->pasteSymbols(e, cr);
+                  }
+            }
+
+
       else {
             qDebug("cannot paste selState %d staffList %d",
                _score->selection().state(), ms->hasFormat(mimeStaffListFormat));
@@ -2729,7 +2668,7 @@ void ScoreView::cmd(const QAction* a)
                   updateAll();
                   }
             }
-      else if (cmd == "rest")
+      else if (cmd == "rest" || cmd == "rest-TAB")
             cmdEnterRest();
       else if (cmd == "rest-1")
             cmdEnterRest(TDuration(TDuration::V_WHOLE));
@@ -3017,15 +2956,19 @@ void ScoreView::cmd(const QAction* a)
 
       else if(cmd == "string-above") {
             int   strg = _score->inputState().string();
-            if(strg > 0)
+            if(strg > 0) {
                   _score->inputState().setString(strg-1);
+                  moveCursor();
+                  }
             }
       else if(cmd == "string-below") {
             InputState  is          = _score->inputState();
             int         maxStrg     = _score->staff(is.track() / VOICES)->lines() - 1;
             int         strg        = is.string();
-            if(strg < maxStrg)
+            if(strg < maxStrg) {
                   _score->inputState().setString(strg+1);
+                  moveCursor();
+                  }
             }
       else if(cmd == "fret-0")
             cmdAddFret(0);
@@ -3076,11 +3019,13 @@ void ScoreView::showOmr(bool flag)
 
 void ScoreView::startNoteEntry()
       {
-      _score->inputState().setSegment(0);
+      InputState& is = _score->inputState();
+
+      is.setSegment(0);
       Note* note  = 0;
       Element* el = _score->selection().activeCR() ? _score->selection().activeCR() : _score->selection().element();
       if (el == 0 || (el->type() != Element::CHORD && el->type() != Element::REST && el->type() != Element::NOTE)) {
-            int track = _score->inputState().track() == -1 ? 0 : _score->inputState().track();
+            int track = is.track() == -1 ? 0 : is.track();
             el = static_cast<ChordRest*>(_score->searchNote(0, track));
             if (el == 0)
                   return;
@@ -3092,16 +3037,16 @@ void ScoreView::startNoteEntry()
                   note = c->upNote();
             el = note;
             }
-      TDuration d(_score->inputState().duration());
+      TDuration d(is.duration());
       if (!d.isValid() || d.isZero() || d.type() == TDuration::V_MEASURE)
-            _score->inputState().setDuration(TDuration(TDuration::V_QUARTER));
+            is.setDuration(TDuration(TDuration::V_QUARTER));
 
       _score->select(el, SELECT_SINGLE, 0);
-      _score->setInputState(el);
-      // bool enable = el && (el->type() == Element::NOTE || el->type() == Element::REST);
+      is.update(el);
 
-      _score->inputState().noteEntryMode = true;
-      _score->inputState().rest = false;
+      is.setNoteEntryMode(true);
+      is.setRest(false);
+
       getAction("pad-rest")->setChecked(false);
       setMouseTracking(true);
       shadowNote->setVisible(true);
@@ -3109,7 +3054,6 @@ void ScoreView::startNoteEntry()
       _score->setUpdateAll();
       _score->end();
 
-      const InputState is = _score->inputState();
       Staff* staff = _score->staff(is.track() / VOICES);
       switch (staff->staffType()->group()) {
             case STANDARD_STAFF_GROUP:
@@ -3118,11 +3062,11 @@ void ScoreView::startNoteEntry()
                   int strg = 0;                 // assume topmost string as current string
                   // if entering note entry with a note selected and the note has a string
                   // set InputState::_string to note visual string
-                  if(el->type() == Element::NOTE) {
+                  if (el->type() == Element::NOTE) {
                         strg = (static_cast<Note*>(el))->string();
                         strg = (static_cast<StaffTypeTablature*>(staff->staffType()))->physStringToVisual(strg);
                         }
-                  _score->inputState().setString(strg);
+                  is.setString(strg);
                   break;
                   }
             case PERCUSSION_STAFF_GROUP:
@@ -3130,7 +3074,7 @@ void ScoreView::startNoteEntry()
             }
 
       // set cursor after setting the stafftype-dependent state
-      _score->moveCursor();
+      moveCursor();
       setCursorOn(true);
       }
 
@@ -3140,13 +3084,13 @@ void ScoreView::startNoteEntry()
 
 void ScoreView::endNoteEntry()
       {
-      //_score->inputState().setSegment(0);
-      _score->inputState().noteEntryMode = false;
-      if (_score->inputState().slur) {
-            const QList<SpannerSegment*>& el = _score->inputState().slur->spannerSegments();
+      InputState& is = _score->inputState();
+      is.setNoteEntryMode(false);
+      if (is.slur()) {
+            const QList<SpannerSegment*>& el = is.slur()->spannerSegments();
             if (!el.isEmpty())
                   el.front()->setSelected(false);
-            _score->inputState().slur = 0;
+            is.setSlur(nullptr);
             }
       setMouseTracking(false);
       shadowNote->setVisible(false);
@@ -3163,8 +3107,8 @@ void ScoreView::contextPopup(QContextMenuEvent* ev)
       {
       QPoint gp = ev->globalPos();
 
-      startMove = toLogical(ev->pos());
-      Element* e = elementNear(startMove);
+      data.startMove = toLogical(ev->pos());
+      Element* e = elementNear(data.startMove);
       if (e) {
             if (!e->selected()) {
                   // bool control = (ev->modifiers() & Qt::ControlModifier) ? true : false;
@@ -3173,7 +3117,8 @@ void ScoreView::contextPopup(QContextMenuEvent* ev)
 //TODO?                  select(ev);
                   }
             Element::ElementType type = e->type();
-            seq->stopNotes();       // stop now because we dont get a mouseRelease event
+            if (seq)
+                  seq->stopNotes();       // stop now because we dont get a mouseRelease event
             if (type == Element::MEASURE)
                   measurePopup(gp, static_cast<Measure*>(e));
             else {
@@ -3194,7 +3139,7 @@ void ScoreView::contextPopup(QContextMenuEvent* ev)
 
 void ScoreView::dragScoreView(QMouseEvent* ev)
       {
-      QPoint d = ev->pos() - _matrix.map(startMove).toPoint();
+      QPoint d = ev->pos() - _matrix.map(data.startMove).toPoint();
       int dx   = d.x();
       int dy   = d.y();
 
@@ -3263,7 +3208,7 @@ void ScoreView::select(QMouseEvent* ev)
       int dragStaffIdx = 0;
       if (type == Element::MEASURE) {
             System* dragSystem = (System*)(curElement->parent());
-            dragStaffIdx  = getStaff(dragSystem, startMove);
+            dragStaffIdx  = getStaff(dragSystem, data.startMove);
             }
       if ((ev->type() == QEvent::MouseButtonRelease) && ((!curElement->selected() || addSelect)))
             return;
@@ -3307,12 +3252,12 @@ void ScoreView::select(QMouseEvent* ev)
 bool ScoreView::mousePress(QMouseEvent* ev)
       {
       startMoveI = ev->pos();
-      startMove  = imatrix.map(QPointF(startMoveI));
-      curElement = elementNear(startMove);
+      data.startMove  = imatrix.map(QPointF(startMoveI));
+      curElement = elementNear(data.startMove);
 
       if (curElement && curElement->type() == Element::MEASURE) {
             System* dragSystem = (System*)(curElement->parent());
-            int dragStaffIdx  = getStaff(dragSystem, startMove);
+            int dragStaffIdx  = getStaff(dragSystem, data.startMove);
             if (dragStaffIdx < 0)
                   curElement = 0;
             }
@@ -3336,10 +3281,10 @@ void ScoreView::mouseReleaseEvent(QMouseEvent* event)
 
 bool ScoreView::editElementDragTransition(QMouseEvent* ev)
       {
-      startMove = toLogical(ev->pos());
-      Element* e = elementNear(startMove);
+      data.startMove = toLogical(ev->pos());
+      Element* e = elementNear(data.startMove);
       if (e && (e == editObject) && (editObject->isText())) {
-            if (editObject->mousePress(startMove, ev)) {
+            if (editObject->mousePress(data.startMove, ev)) {
                   _score->addRefresh(editObject->canvasBoundingRect());
                   _score->end();
                   }
@@ -3348,7 +3293,7 @@ bool ScoreView::editElementDragTransition(QMouseEvent* ev)
       int i;
       qreal a = grip[0].width() * 1.0;
       for (i = 0; i < grips; ++i) {
-            if (grip[i].adjusted(-a, -a, a, a).contains(startMove)) {
+            if (grip[i].adjusted(-a, -a, a, a).contains(data.startMove)) {
                   curGrip = i;
                   updateGrips();
                   score()->end();
@@ -3364,10 +3309,10 @@ bool ScoreView::editElementDragTransition(QMouseEvent* ev)
 
 void ScoreView::onEditPasteTransition(QMouseEvent* ev)
       {
-      startMove = imatrix.map(QPointF(ev->pos()));
-      Element* e = elementNear(startMove);
+      data.startMove = imatrix.map(QPointF(ev->pos()));
+      Element* e = elementNear(data.startMove);
       if (e == editObject) {
-            if (editObject->mousePress(startMove, ev)) {
+            if (editObject->mousePress(data.startMove, ev)) {
                   _score->addRefresh(editObject->canvasBoundingRect());
                   _score->end();
                   }
@@ -3385,7 +3330,7 @@ bool ScoreView::editScoreViewDragTransition(QMouseEvent* ev)
       Element* e = elementNear(p);
 
       if (e == 0 || e->type() == Element::MEASURE) {
-            startMove   = p;
+            data.startMove   = p;
 //TODOxxx            dragElement = e;
             return true;
             }
@@ -3403,7 +3348,7 @@ bool ScoreView::editSelectTransition(QMouseEvent* ev)
       Element* e = elementNear(p);
 
       if (e != editObject) {
-            startMove   = p;
+            data.startMove   = p;
 //TODOxxx            dragElement = e;
             return true;
             }
@@ -3419,7 +3364,7 @@ void ScoreView::doDragLasso(QMouseEvent* ev)
       QPointF p = toLogical(ev->pos());
       _score->addRefresh(lasso->canvasBoundingRect());
       QRectF r;
-      r.setCoords(startMove.x(), startMove.y(), p.x(), p.y());
+      r.setCoords(data.startMove.x(), data.startMove.y(), p.x(), p.y());
       lasso->setRect(r.normalized());
       QRectF _lassoRect(lasso->rect());
       r = _matrix.mapRect(_lassoRect);
@@ -3779,6 +3724,8 @@ void ScoreView::adjustCanvasPosition(const Element* el, bool playBack)
             return;
 
       System* sys = m->system();
+      if (!sys)
+            return;
 
       QPointF p(el->canvasPos());
       QRectF r(imatrix.mapRect(geometry()));
@@ -3860,14 +3807,10 @@ void ScoreView::adjustCanvasPosition(const Element* el, bool playBack)
 
 void ScoreView::cmdEnterRest()
       {
-      InputState& is = _score->inputState();
-      if (is.track() == -1) {          // invalid state
+      const InputState& is = _score->inputState();
+      if (is.track() == -1 || is.segment() == 0)          // invalid state
             return;
-            }
-      if (is.segment() == 0) {
-            return;
-            }
-      cmdEnterRest(_score->inputState().duration());
+      cmdEnterRest(is.duration());
       }
 
 //---------------------------------------------------------
@@ -3995,11 +3938,9 @@ bool ScoreView::event(QEvent* event)
             Element* e = static_cast<CloneEvent*>(event)->element();
             cloneElement(e);
             }
-#if QT_VERSION < 0x050000
       else if (event->type() == QEvent::Gesture) {
             return gestureEvent(static_cast<QGestureEvent*>(event));
             }
-#endif
       return QWidget::event(event);
       }
 
@@ -4023,11 +3964,11 @@ void ScoreView::startUndoRedo()
 void ScoreView::cmdAddSlur()
       {
       InputState& is = _score->inputState();
-      if (noteEntryMode() && is.slur) {
-            const QList<SpannerSegment*>& el = is.slur->spannerSegments();
+      if (noteEntryMode() && is.slur()) {
+            const QList<SpannerSegment*>& el = is.slur()->spannerSegments();
             if (!el.isEmpty())
                   el.front()->setSelected(false);
-            is.slur = 0;
+            is.setSlur(nullptr);
             return;
             }
       if (_score->selection().state() == SEL_RANGE) {
@@ -4055,6 +3996,7 @@ void ScoreView::cmdAddSlur()
                         slur->setTick(cr1->tick());
                         slur->setTick2(cr2->tick());
                         slur->setTrack(cr1->track());
+                        slur->setTrack2(cr2->track());
                         slur->setParent(0);
                         _score->undoAddElement(slur);
                         }
@@ -4152,6 +4094,7 @@ void ScoreView::cmdAddSlur(Note* firstNote, Note* lastNote)
             slur->setStartChord(static_cast<Chord*>(cr1));
             slur->setEndChord(static_cast<Chord*>(cr2));
             slur->setTrack(cr1->track());
+            slur->setTrack2(cr2->track());
             slur->setParent(cr1);
             score()->undoAddElement(slur);
             _score->endCmd();
@@ -4165,6 +4108,10 @@ void ScoreView::cmdAddSlur(Note* firstNote, Note* lastNote)
       slur->setTick(cr1->tick());
       slur->setTick2(cr2->tick());
       slur->setTrack(cr1->track());
+      if (cr2->staff()->part() == cr1->staff()->part() && !cr2->staff()->isLinked(cr1->staff()))
+            slur->setTrack2(cr2->track());
+      else
+            slur->setTrack2(cr1->track());
       slur->setParent(0);
       _score->undoAddElement(slur);
       slur->layout();
@@ -4178,7 +4125,7 @@ void ScoreView::cmdAddSlur(Note* firstNote, Note* lastNote)
             }
       const QList<SpannerSegment*>& el = slur->spannerSegments();
       if (noteEntryMode()) {
-            _score->inputState().slur = slur;
+            _score->inputState().setSlur(slur);
             if (!el.isEmpty())
                   el.front()->setSelected(true);
             else
@@ -4216,7 +4163,7 @@ void ScoreView::cmdChangeEnharmonic(bool up)
                   continue;
             if (staff->isTabStaff()) {
                   int string = n->line() + (up ? 1 : -1);
-                  int fret = staff->part()->instr()->tablature()->fret(n->pitch(), string);
+                  int fret = staff->part()->instr()->stringData()->fret(n->pitch(), string);
                   if (fret != -1) {
                         score()->undoChangeProperty(n, P_FRET, fret);
                         score()->undoChangeProperty(n, P_STRING, string);
@@ -4394,7 +4341,7 @@ void ScoreView::changeVoice(int voice)
       int track = (is->track() / VOICES) * VOICES + voice;
       is->setTrack(track);
 
-      if (is->noteEntryMode) {
+      if (is->noteEntryMode()) {
             if (is->segment()) { // can be null for eg repeatMeasure
                   is->setSegment(is->segment()->measure()->first(Segment::SegChordRest));
                   score()->setUpdateAll(true);
@@ -4842,7 +4789,7 @@ void ScoreView::cmdAddPitch(int note, bool addFlag)
                   Chord* chord = static_cast<Note*>(el)->chord();
                   Note * n = chord->upNote();
                   octave = n->pitch() / 12;
-                  if( note < n->pitch() / (octave * 7))
+                  if (note < n->pitch() / (octave * 7))
                         octave++;
                   }
             else {
@@ -4897,9 +4844,9 @@ void ScoreView::cmdAddPitch(int note, bool addFlag)
                   Chord* chord = static_cast<Note*>(el)->chord();
                   NoteVal val;
                   val.pitch  = line2pitch(pos.line, clef, 0);
-                  val.tpc    = INVALID_TPC;
-                  val.fret   = FRET_NONE;
-                  val.string = STRING_NONE;
+                  // val.tpc    = INVALID_TPC;
+                  // val.fret   = FRET_NONE;
+                  // val.string = STRING_NONE;
                   _score->addNote(chord, val);
                   _score->endCmd();
                   return;
@@ -4912,6 +4859,7 @@ void ScoreView::cmdAddPitch(int note, bool addFlag)
       else
             score()->putNote(pos, !addFlag);
       _score->endCmd();
+
       adjustCanvasPosition(is.cr(), false);
       }
 
@@ -5131,9 +5079,11 @@ void ScoreView::cmdInsertMeasures(int n, Element::ElementType type)
             return;
       _score->startCmd();
       for (int i = 0; i < n; ++i)
-            mb = _score->insertMeasure(type, mb);
-      if (mb)
-           _score->select(mb, SELECT_SINGLE, 0);
+            _score->insertMeasure(type, mb);
+
+      // measure may be part of mm rest:
+      if (!_score->styleB(ST_createMultiMeasureRests) && type == Element::MEASURE)
+            _score->select(mb, SELECT_SINGLE, 0);
       _score->endCmd();
       }
 
@@ -5168,20 +5118,24 @@ void ScoreView::cmdInsertMeasure(Element::ElementType type)
 void ScoreView::cmdRepeatSelection()
       {
       const Selection& selection = _score->selection();
+
       if (noteEntryMode() && selection.isSingle()) {
             Element* el = _score->selection().element();
             if (el && el->type() == Element::NOTE) {
-                  Chord* c = static_cast<Note*>(el)->chord();
-                  _score->startCmd();
-                  for (int i = 0; i < c->notes().size(); ++i) {
-                        Note* n = c->notes().at(i);
-                        _score->addPitch(n->pitch(), i != 0);
+                  if (!_score->inputState().endOfScore()) {
+                        _score->startCmd();
+                        bool addTo = false;
+                        Chord* c = static_cast<Note*>(el)->chord();
+                        for (Note* note : c->notes()) {
+                              _score->addPitch(note->pitch(), addTo);
+                              addTo = true;
+                              }
+                        _score->endCmd();
+                        mscore->endCmd();
                         }
-                  _score->endCmd();
                   }
             return;
             }
-
       if (selection.state() != SEL_RANGE) {
             qDebug("wrong selection type");
             return;
@@ -5291,13 +5245,21 @@ void ScoreView::searchPage(int n)
 
 void ScoreView::searchMeasure(int n)
       {
+      if (n <= 0)
+            return;
+      --n;
       int i = 0;
-      for (Measure* measure = _score->firstMeasure(); measure; measure = measure->nextMeasure()) {
-            if (++i < n)
-                  continue;
-            gotoMeasure(measure);
-            break;
+      Measure* measure;
+      for (measure = _score->firstMeasureMM(); measure; measure = measure->nextMeasureMM()) {
+            int nn = _score->styleB(ST_createMultiMeasureRests) && measure->isMMRest()
+               ? measure->mmRestCount() : 1;
+            if (n >= i && n < (i+nn))
+                  break;
+            i += nn;
             }
+      if (!measure)
+            measure = score()->lastMeasureMM();
+      gotoMeasure(measure);
       }
 
 //---------------------------------------------------------
@@ -5572,5 +5534,39 @@ Element* ScoreView::elementNear(QPointF p)
       return e;
       }
 
+//---------------------------------------------------------
+//   posChanged
+//---------------------------------------------------------
+
+void ScoreView::posChanged(POS pos, unsigned tick)
+      {
+      switch (pos) {
+            case POS::CURRENT:
+                  moveCursor();
+                  break;
+            case POS::LEFT:
+                  _curLoopIn->move(_score->pos(POS::LEFT));
+                  break;
+            case POS::RIGHT:
+                  _curLoopOut->move(_score->pos(POS::RIGHT));
+                  break;
+            }
+      }
+
+//---------------------------------------------------------
+//   loopToggled
+//---------------------------------------------------------
+
+void ScoreView::loopToggled(bool val)
+      {
+      printf("loop toggled %d - %d\n", _score->pos(POS::LEFT), _score->pos(POS::RIGHT));
+      if (_score->pos(POS::LEFT) == 0 && _score->pos(POS::RIGHT) == 0)
+            _score->setPos(POS::RIGHT, _score->lastMeasure()->endTick());
+      _curLoopIn->move(_score->loopInTick());
+      _curLoopOut->move(_score->loopOutTick());
+      _curLoopIn->setVisible(val);
+      _curLoopOut->setVisible(val);
+      update();
+      }
 }
 

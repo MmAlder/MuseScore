@@ -72,7 +72,6 @@ void Segment::setElement(int track, Element* el)
       {
       if (el) {
             el->setParent(this);
-            printf("Segment::setElement %s segment %s\n", el->name(), subTypeName());
             _elist[track] = el;
             empty = false;
             }
@@ -224,9 +223,32 @@ Segment* Segment::next1() const
       return m->first();
       }
 
+//---------------------------------------------------------
+//   next1MM
+//---------------------------------------------------------
+
+Segment* Segment::next1MM() const
+      {
+      if (next())
+            return next();
+      Measure* m = measure()->nextMeasureMM();
+      if (m == 0)
+            return 0;
+      return m->first();
+      }
+
 Segment* Segment::next1(SegmentTypes types) const
       {
       for (Segment* s = next1(); s; s = s->next1()) {
+            if (s->segmentType() & types)
+                  return s;
+            }
+      return 0;
+      }
+
+Segment* Segment::next1MM(SegmentTypes types) const
+      {
+      for (Segment* s = next1MM(); s; s = s->next1MM()) {
             if (s->segmentType() & types)
                   return s;
             }
@@ -277,9 +299,28 @@ Segment* Segment::prev1() const
       return m->last();
       }
 
+Segment* Segment::prev1MM() const
+      {
+      if (prev())
+            return prev();
+      Measure* m = measure()->prevMeasureMM();
+      if (m == 0)
+            return 0;
+      return m->last();
+      }
+
 Segment* Segment::prev1(SegmentTypes types) const
       {
       for (Segment* s = prev1(); s; s = s->prev1()) {
+            if (s->segmentType() & types)
+                  return s;
+            }
+      return 0;
+      }
+
+Segment* Segment::prev1MM(SegmentTypes types) const
+      {
+      for (Segment* s = prev1MM(); s; s = s->prev1MM()) {
             if (s->segmentType() & types)
                   return s;
             }
@@ -462,6 +503,17 @@ void Segment::add(Element* el)
                   _elist[track] = el;
                   empty = false;
                   break;
+            case AMBITUS:
+                  Q_ASSERT(_segmentType == SegAmbitus);
+                  if (_elist[track]) {
+                        qDebug("%p Segment %s add(%s) there is already an %s at %s(%d) track %d. score %p",
+                           this, subTypeName(), el->name(), _elist[track]->name(),
+                           score()->sigmap()->pos(tick()), tick(), track, score());
+                        return;
+                        }
+                  _elist[track] = el;
+                  empty = false;
+                  break;
 
             default:
                   qDebug("Segment::add() unknown %s", el->name());
@@ -544,6 +596,7 @@ void Segment::remove(Element* el)
             case KEYSIG:
             case BAR_LINE:
             case BREATH:
+            case AMBITUS:
                   _elist[track] = 0;
                   break;
 
@@ -869,5 +922,15 @@ void Segment::removeAnnotation(Element* e)
                   }
             }
       }
+
+//---------------------------------------------------------
+//   clearAnnotations
+//---------------------------------------------------------
+
+void Segment::clearAnnotations()
+      {
+      _annotations.clear();
+      }
+
 }
 

@@ -220,7 +220,8 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       ScoreTab* tab1;
       ScoreTab* tab2;
       NScrollArea* _navigator;
-      ImportMidiPanel* importmidi_panel;
+      ImportMidiPanel* importmidiPanel;
+      QFrame* importmidiShowPanel;
       QSplitter* mainWindow;
 
       QMenu* menuView;
@@ -247,6 +248,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       InsertMeasuresDialog* insertMeasuresDialog;
       MasterPalette* masterPalette;
       PluginCreator* pluginCreator;
+      PluginManager* pluginManager;
 
       QMenu* _fileMenu;
       QMenu* menuEdit;
@@ -340,6 +342,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       QAction* lastCmd;
       Shortcut* lastShortcut;
 
+      QAction* countInAction;
       QAction* metronomeAction;
       QAction* loopAction;
       QAction* loopInAction;
@@ -379,7 +382,6 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void showMixer(bool);
       void showSynthControl(bool);
       void showSearchDialog();
-      void helpBrowser() const;
       void helpBrowser(const QUrl&) const;
       void splitWindow(bool horizontal);
       void removeSessionFile();
@@ -392,7 +394,6 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void showAlbumManager();
       void showLayerManager();
       void updateUndoRedo();
-      void cmdAddChordName2();
       void changeScore(int);
       virtual void resizeEvent(QResizeEvent*);
       void updateInspector();
@@ -449,6 +450,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void switchPlayMode(int);
       void networkFinished(QNetworkReply*);
       void switchLayoutMode(int);
+      void showMidiImportPanel();
 
    public slots:
       virtual void cmd(QAction* a);
@@ -500,6 +502,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void updateDrumTools();
       void showWebPanel(bool on);
       void showPluginCreator(QAction*);
+      void showPluginManager(QAction*);
 
       void updateTabNames();
       QProgressBar* showProgressBar();
@@ -539,7 +542,8 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       bool eventFilter(QObject *, QEvent *);
       void setMidiRecordId(int id) { _midiRecordId = id; }
       int midiRecordId() const { return _midiRecordId; }
-      void populatePalette();
+      void setAdvancedPalette();
+      void setBasicPalette();
       void excerptsChanged(Score*);
       bool processMidiRemote(MidiRemoteType type, int data);
       ScoreTab* getTab1() const { return tab1; }
@@ -606,6 +610,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void updatePlayMode();
       bool loop() const         	 { return loopAction->isChecked(); }
       bool metronome() const         { return metronomeAction->isChecked(); }
+      bool countIn() const           { return countInAction->isChecked(); }
       bool panDuringPlayback() const { return panAction->isChecked(); }
       void noteTooShortForTupletDialog();
       void loadFiles();
@@ -615,6 +620,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       void allowShowMidiPanel(const QString &file);
       void setMidiPrefOperations(const QString &file);
 
+      static Palette* newTempoPalette();
       static Palette* newTextPalette();
       static Palette* newTimePalette();
       static Palette* newRepeatsPalette();
@@ -633,7 +639,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       static Palette* newGraceNotePalette();
       static Palette* newBagpipeEmbellishmentPalette();
       static Palette* newKeySigPalette();
-      static Palette* newAccidentalsPalette();
+      static Palette* newAccidentalsPalette(bool basic = false);
       static Palette* newBarLinePalette();
       static Palette* newLinesPalette();
 
@@ -642,6 +648,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       PluginCreator* getPluginCreator()   { return pluginCreator; }
       ScoreView* currentScoreView() const { return cv; }
       void showMessage(const QString& s, int timeout);
+      void helpBrowser(const QString = QString()) const;
       };
 
 extern MuseScore* mscore;

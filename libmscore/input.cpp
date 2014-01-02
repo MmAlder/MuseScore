@@ -15,31 +15,13 @@
 #include "part.h"
 #include "staff.h"
 #include "score.h"
-#include "chordrest.h"
+#include "chord.h"
+#include "rest.h"
+#include "measure.h"
 
 namespace Ms {
 
 class DrumSet;
-
-//---------------------------------------------------------
-//   InputState
-//---------------------------------------------------------
-
-InputState::InputState() :
-   _duration(TDuration::V_INVALID),
-   _drumNote(-1),
-   _drumset(0),
-   _track(0),
-   _segment(0),
-   _string(VISUAL_STRING_NONE),
-   _repitchMode(false),
-   rest(false),
-   noteType(NOTE_NORMAL),
-   beamMode(BeamMode::AUTO),
-   noteEntryMode(false),
-   slur(0)
-      {
-      }
 
 //---------------------------------------------------------
 //   drumset
@@ -82,13 +64,123 @@ ChordRest* InputState::cr() const
       }
 
 //---------------------------------------------------------
-//   setTrack
+//   update
 //---------------------------------------------------------
 
-void InputState::setTrack(int v)
+void InputState::update(Element* e)
       {
-      _track = v;
+      if (e == 0)
+            return;
+      if (e && e->type() == Element::CHORD)
+            e = static_cast<Chord*>(e)->upNote();
+
+      setDrumNote(-1);
+      if (e->type() == Element::NOTE) {
+            Note* note    = static_cast<Note*>(e);
+            Chord* chord  = note->chord();
+            setDuration(chord->durationType());
+            setRest(false);
+            setTrack(note->track());
+            setNoteType(note->noteType());
+            setBeamMode(chord->beamMode());
+            }
+      else if (e->type() == Element::REST) {
+            Rest* rest   = static_cast<Rest*>(e);
+            if (rest->durationType().type() == TDuration::V_MEASURE)
+                  setDuration(TDuration::V_QUARTER);
+            else
+                  setDuration(rest->durationType());
+            setRest(true);
+            setTrack(rest->track());
+            setBeamMode(rest->beamMode());
+            setNoteType(NOTE_NORMAL);
+            }
+      if (e->type() == Element::NOTE || e->type() == Element::REST) {
+            const Instrument* instr = e->staff()->part()->instr();
+            if (instr->useDrumset()) {
+                  if (e->type() == Element::NOTE)
+                        setDrumNote(static_cast<Note*>(e)->pitch());
+                  else
+                        setDrumNote(-1);
+                  }
+            }
       }
+
+//---------------------------------------------------------
+//   moveInputPos
+//---------------------------------------------------------
+
+void InputState::moveInputPos(Element* e)
+      {
+      if (e == 0)
+            return;
+
+      Segment* s;
+      if (e->isChordRest())
+            s = static_cast<ChordRest*>(e)->segment();
+      else
+            s = static_cast<Segment*>(e);
+      if (s->type() == Element::SEGMENT) {
+            if (s->measure()->isMMRest()) {
+                  Measure* m = s->measure()->mmRestFirst();
+                  s = m->findSegment(Segment::SegChordRest, m->tick());
+                  }
+            _lastSegment = _segment;
+            _segment = s;
+            }
+      }
+
+//---------------------------------------------------------
+//   setSegment
+//---------------------------------------------------------
+
+void InputState::setSegment(Segment* s)
+      {
+      if (s && s->measure()->isMMRest()) {
+            Measure* m = s->measure()->mmRestFirst();
+            s = m->findSegment(Segment::SegChordRest, m->tick());
+            }
+      _segment = s;
+      _lastSegment = s;
+      }
+
+//---------------------------------------------------------
+//   nextInputPos
+//---------------------------------------------------------
+
+Segment* InputState::nextInputPos() const
+      {
+      Measure* m = _segment->measure();
+      Segment* s = _segment->next1(Segment::SegChordRest);
+      for (; s; s = s->next1(Segment::SegChordRest)) {
+            if (s->element(_track) || s->measure() != m)
+                  return s;
+            }
+      return 0;
+      }
+
+//---------------------------------------------------------
+//   moveToNextInputPos
+//   TODO: special case: note is first note of tie: goto to last note of tie
+//---------------------------------------------------------
+
+void InputState::moveToNextInputPos()
+      {
+      Segment* s   = nextInputPos();
+      _lastSegment = _segment;
+      if (s)
+            _segment = s;
+      }
+
+//---------------------------------------------------------
+//   endOfScore
+//---------------------------------------------------------
+
+bool InputState::endOfScore() const
+      {
+      return (_lastSegment == _segment) && !nextInputPos();
+      }
+
 
 }
 

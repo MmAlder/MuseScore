@@ -121,17 +121,16 @@ void MeasureBase::add(Element* e)
                         }
                   }
             switch (b->layoutBreakType()) {
-                  case LAYOUT_BREAK_PAGE:
+                  case LayoutBreak::PAGE:
                         _pageBreak = true;
                         break;
-                  case LAYOUT_BREAK_LINE:
+                  case LayoutBreak::LINE:
                         _lineBreak = true;
                         break;
-                  case LAYOUT_BREAK_SECTION:
+                  case LayoutBreak::SECTION:
                         _sectionBreak = b;
 //does not work with repeats: score()->tempomap()->setPause(endTick(), b->pause());
-                        if(b->startWithMeasureOne())
-                              score()->renumberMeasures();
+                        score()->setLayoutAll(true);
                         break;
                   }
             }
@@ -151,24 +150,22 @@ void MeasureBase::remove(Element* el)
       if (el->type() == LAYOUT_BREAK) {
             LayoutBreak* lb = static_cast<LayoutBreak*>(el);
             switch (lb->layoutBreakType()) {
-                  case LAYOUT_BREAK_PAGE:
+                  case LayoutBreak::PAGE:
                         _pageBreak = false;
                         break;
-                  case LAYOUT_BREAK_LINE:
+                  case LayoutBreak::LINE:
                         _lineBreak = false;
                         break;
-                  case LAYOUT_BREAK_SECTION:
+                  case LayoutBreak::SECTION:
                         _sectionBreak = 0;
                         score()->tempomap()->setPause(endTick(), 0);
-                        if(lb->startWithMeasureOne())
-                              score()->renumberMeasures();
+                        score()->setLayoutAll(true);
                         break;
                   }
             }
       if (!_el.remove(el))
             qDebug("MeasureBase(%p)::remove(%s,%p) not found\n", this, el->name(), el);
       }
-
 
 //---------------------------------------------------------
 //   nextMeasure
@@ -186,6 +183,24 @@ Measure* MeasureBase::nextMeasure() const
       }
 
 //---------------------------------------------------------
+//   nextMeasureMM
+//---------------------------------------------------------
+
+Measure* MeasureBase::nextMeasureMM() const
+      {
+      MeasureBase* m = _next;
+      for (;;) {
+            if (m == 0 || m->type() == MEASURE)
+                  break;
+            m = m->_next;
+            }
+      Measure* mm = static_cast<Measure*>(m);
+      if (mm && score()->styleB(ST_createMultiMeasureRests) && mm->hasMMRest())
+            return mm->mmRest();
+      return mm;
+      }
+
+//---------------------------------------------------------
 //   prevMeasure
 //---------------------------------------------------------
 
@@ -195,6 +210,31 @@ Measure* MeasureBase::prevMeasure() const
       while (m) {
             if (m->type() == MEASURE)
                   return static_cast<Measure*>(m);
+            m = m->prev();
+            }
+      return 0;
+      }
+
+//---------------------------------------------------------
+//   prevMeasure
+//---------------------------------------------------------
+
+Measure* MeasureBase::prevMeasureMM() const
+      {
+      MeasureBase* m = prev();
+      while (m) {
+            if (m->type() == MEASURE) {
+                  Measure* mm = static_cast<Measure*>(m);
+                  if (score()->styleB(ST_createMultiMeasureRests)) {
+                        if (mm->mmRestCount() >= 0) {
+                              if (mm->hasMMRest())
+                                    return mm->mmRest();
+                              return mm;
+                              }
+                        }
+                  else
+                        return mm;
+                  }
             m = m->prev();
             }
       return 0;
@@ -224,13 +264,13 @@ void MeasureBase::layout0()
                   continue;
             LayoutBreak* e = static_cast<LayoutBreak*>(element);
             switch (e->layoutBreakType()) {
-                  case LAYOUT_BREAK_PAGE:
+                  case LayoutBreak::PAGE:
                         _pageBreak = true;
                         break;
-                  case LAYOUT_BREAK_LINE:
+                  case LayoutBreak::LINE:
                         _lineBreak = true;
                         break;
-                  case LAYOUT_BREAK_SECTION:
+                  case LayoutBreak::SECTION:
                         _sectionBreak = e;
                         break;
                   }
@@ -313,7 +353,7 @@ bool MeasureBase::setProperty(P_ID id, const QVariant& property)
 //   setProperty
 //---------------------------------------------------------
 
-void MeasureBase::undoSetBreak(bool v, LayoutBreakType type)
+void MeasureBase::undoSetBreak(bool v, LayoutBreak::LayoutBreakType type)
       {
       if (v) {
             LayoutBreak* lb = new LayoutBreak(_score);
@@ -331,6 +371,21 @@ void MeasureBase::undoSetBreak(bool v, LayoutBreakType type)
                         }
                   }
             }
+      }
+
+//---------------------------------------------------------
+//   nextMM
+//---------------------------------------------------------
+
+MeasureBase* MeasureBase::nextMM() const
+      {
+      if (_next
+         && _next->type() == MEASURE
+         && score()->styleB(ST_createMultiMeasureRests)
+         && static_cast<Measure*>(_next)->hasMMRest()) {
+            return static_cast<Measure*>(_next)->mmRest();
+            }
+      return _next;
       }
 }
 

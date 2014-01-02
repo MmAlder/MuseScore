@@ -61,20 +61,29 @@ EditStyle::EditStyle(Score* s, QWidget* parent)
       articulationTable->setColumnWidth(1, 180);
       articulationTable->setRowCount(ARTICULATIONS);
 
+      musicalSymbolFont->clear();
+      int idx = 0;
+      for (auto i : ScoreFont::scoreFonts()) {
+            musicalSymbolFont->addItem(i.name(), idx);
+            ++idx;
+            }
+
       for (int i = 0; i < ARTICULATIONS; ++i) {
             ArticulationInfo* ai = &Articulation::articulationList[i];
 
-            QPixmap ct = sym2pixmap(&symbols[0][ai->upSym], 3.0);
+            QPixmap ct = cs->scoreFont()->sym2pixmap(ai->upSym, 3.0);
             QIcon icon(ct);
-            QTableWidgetItem* item = new QTableWidgetItem(icon, qApp->translate("articulation", qPrintable(ai->name)));
+            QTableWidgetItem* item = new QTableWidgetItem(icon, qApp->translate("articulation", qPrintable(ai->description)));
 
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
             articulationTable->setItem(i, 0, item);
 
             QComboBox* cb = new QComboBox();
-            cb->addItem(tr("TopStaff"), A_TOP_STAFF);
-            cb->addItem(tr("BottomStaff"), A_BOTTOM_STAFF);
-            cb->addItem(tr("Chord"), A_CHORD);
+            cb->addItem(tr("Above Staff"), A_TOP_STAFF);
+            cb->addItem(tr("Below Staff"), A_BOTTOM_STAFF);
+            cb->addItem(tr("Chord Automatic"), A_CHORD);
+            cb->addItem(tr("Above Chord"), A_TOP_CHORD);
+            cb->addItem(tr("Below Chord"), A_BOTTOM_CHORD);
             articulationTable->setCellWidget(i, 1, cb);
             }
       QButtonGroup* bg = new QButtonGroup(this);
@@ -179,7 +188,6 @@ void EditStyle::apply()
       {
       getValues();
       cs->undo(new ChangeStyle(cs, lstyle));
-      cs->setLayoutAll(true);
       cs->update();
       }
 
@@ -230,7 +238,7 @@ void EditStyle::getValues()
       lstyle.set(ST_clefBarlineDistance,     Spatium(clefBarlineDistance->value()));
       lstyle.set(ST_staffLineWidth,          Spatium(staffLineWidth->value()));
       lstyle.set(ST_beamWidth,               Spatium(beamWidth->value()));
-      lstyle.set(ST_beamDistance,            beamDistance->value());
+      lstyle.set(ST_beamDistance,            beamDistance->value() * 0.01);
       lstyle.set(ST_beamMinLen,              Spatium(beamMinLen->value()));
       lstyle.set(ST_beamNoSlope,             beamNoSlope->isChecked());
 
@@ -315,7 +323,8 @@ void EditStyle::getValues()
       lstyle.set(ST_SlurMidWidth,            Spatium(slurMidLineWidth->value()));
       lstyle.set(ST_SlurDottedWidth,         Spatium(slurDottedLineWidth->value()));
 
-      lstyle.set(ST_MusicalSymbolFont,       musicalSymbolFont->currentText());
+      int idx1 = musicalSymbolFont->itemData(musicalSymbolFont->currentIndex()).toInt();
+      lstyle.set(ST_MusicalSymbolFont, ScoreFont::scoreFonts().at(idx1).name());
 
       lstyle.set(ST_showHeader,      showHeader->isChecked());
       lstyle.set(ST_headerStyled,    headerStyled->isChecked());
@@ -409,6 +418,8 @@ void EditStyle::getValues()
       lstyle.set(ST_harmonyFretDist,         Spatium(harmonyFretDist->value()));
       lstyle.set(ST_minHarmonyDistance,      Spatium(minHarmonyDistance->value()));
 
+      lstyle.set(ST_capoPosition,            capoPosition->value());
+
       lstyle.set(ST_tabClef, int(clefTab1->isChecked() ? ClefType::TAB : ClefType::TAB2));
 
       lstyle.set(ST_crossMeasureValues,      crossMeasureValues->isChecked());
@@ -476,7 +487,7 @@ void EditStyle::setValues()
       staffLineWidth->setValue(lstyle.value(ST_staffLineWidth).toDouble());
 
       beamWidth->setValue(lstyle.value(ST_beamWidth).toDouble());
-      beamDistance->setValue(lstyle.value(ST_beamDistance).toDouble());
+      beamDistance->setValue(lstyle.value(ST_beamDistance).toDouble() * 100.0);
       beamMinLen->setValue(lstyle.value(ST_beamMinLen).toDouble());
       beamNoSlope->setChecked(lstyle.value(ST_beamNoSlope).toBool());
 
@@ -588,7 +599,16 @@ void EditStyle::setValues()
       slurEndLineWidth->setValue(lstyle.value(ST_SlurEndWidth).toDouble());
       slurMidLineWidth->setValue(lstyle.value(ST_SlurMidWidth).toDouble());
       slurDottedLineWidth->setValue(lstyle.value(ST_SlurDottedWidth).toDouble());
-      musicalSymbolFont->setCurrentIndex(lstyle.value(ST_MusicalSymbolFont).toString() == "Emmentaler" ? 0 : 1);
+
+      QString mfont(lstyle.value(ST_MusicalSymbolFont).toString());
+      int idx = 0;
+      for (auto i : ScoreFont::scoreFonts()) {
+            if (i.name().toLower() == mfont.toLower()) {
+                  musicalSymbolFont->setCurrentIndex(idx);
+                  break;
+                  }
+            ++idx;
+            }
 
       showHeader->setChecked(lstyle.value(ST_showHeader).toBool());
       headerStyled->setChecked(lstyle.value(ST_headerStyled).toBool());
@@ -647,6 +667,7 @@ void EditStyle::setValues()
       harmonyY->setValue(lstyle.value(ST_harmonyY).toDouble());
       harmonyFretDist->setValue(lstyle.value(ST_harmonyFretDist).toDouble());
       minHarmonyDistance->setValue(lstyle.value(ST_minHarmonyDistance).toDouble());
+      capoPosition->setValue(lstyle.value(ST_capoPosition).toInt());
       pedalY->setValue(lstyle.value(ST_pedalY).toDouble());
       pedalLineWidth->setValue(lstyle.value(ST_pedalLineWidth).toDouble());
       pedalLineStyle->setCurrentIndex(lstyle.value(ST_pedalLineStyle).toInt()-1);

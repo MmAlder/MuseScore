@@ -66,6 +66,7 @@
 #include "audio.h"
 #include "instrtemplate.h"
 #include "cursor.h"
+#include "sym.h"
 
 namespace Ms {
 
@@ -287,8 +288,9 @@ void Score::init()
             _repeatList = 0;
             }
 
-      _revisions      = new Revisions;
-      _symIdx         = 0;
+      _revisions = new Revisions;
+      _scoreFont = ScoreFont::fontFactory("emmentaler");
+
       _pageNumberOffset = 0;
       int numOfPresets = StaffType::numOfPresets();
       for (int idx = 0; idx < numOfPresets; idx++) {
@@ -296,44 +298,44 @@ void Score::init()
             addStaffType(st);
             }
 
-      _mscVersion     = MSCVERSION;
-      _created        = false;
+      _mscVersion             = MSCVERSION;
+      _created                = false;
 
-      _updateAll      = true;
-      _layoutAll      = true;
-      layoutFlags     = 0;
-      _undoRedo       = false;
-      _playNote       = false;
-      _excerptsChanged = false;
-      _instrumentsChanged = false;
-      _selectionChanged   = false;
+      _updateAll              = true;
+      _layoutAll              = true;
+      layoutFlags             = 0;
+      _undoRedo               = false;
+      _playNote               = false;
+      _excerptsChanged        = false;
+      _instrumentsChanged     = false;
+      _selectionChanged       = false;
 
-      keyState             = 0;
-      _showInvisible       = true;
-      _showUnprintable     = true;
-      _showFrames          = true;
-      _showIntervalGuides  = false;
-      _showPageborders     = false;
-      _showInstrumentNames = true;
-      _showVBox            = true;
+      keyState                = 0;
+      _showInvisible          = true;
+      _showUnprintable        = true;
+      _showFrames             = true;
+      _showIntervalGuides     = false;
+      _showPageborders        = false;
+      _showInstrumentNames    = true;
+      _showVBox               = true;
 
-      _printing       = false;
-      _playlistDirty  = false;
-      _autosaveDirty  = false;
-      _dirty          = false;
-      _saved          = false;
-      _playPos        = 0;
-      _loopInTick     = -1;
-      _loopOutTick    = -1;
-      _fileDivision   = MScore::division;
-      _defaultsRead   = false;
-      _omr            = 0;
-      _audio          = 0;
-      _showOmr        = false;
-      _sigmap         = 0;
-      _tempomap       = 0;
-      _layoutMode     = LayoutPage;
-      _noteHeadWidth  = symbols[_symIdx][quartheadSym].width(spatium() / (MScore::DPI * SPATIUM20));
+      _printing               = false;
+      _playlistDirty          = false;
+      _autosaveDirty          = false;
+      _dirty                  = false;
+      _saved                  = false;
+      _pos[int(POS::CURRENT)] = 0;
+      _pos[int(POS::LEFT)]    = 0;
+      _pos[int(POS::RIGHT)]   = 0;
+      _fileDivision           = MScore::division;
+      _defaultsRead           = false;
+      _omr                    = 0;
+      _audio                  = 0;
+      _showOmr                = false;
+      _sigmap                 = 0;
+      _tempomap               = 0;
+      _layoutMode             = LayoutPage;
+      _noteHeadWidth          = 0.0;      // set in doLayout()
       }
 
 //---------------------------------------------------------
@@ -341,7 +343,7 @@ void Score::init()
 //---------------------------------------------------------
 
 Score::Score()
-   : QObject(0), _selection(this)
+   : QObject(0), _is(this), _selection(this)
       {
       _parentScore = 0;
       init();
@@ -351,7 +353,7 @@ Score::Score()
       }
 
 Score::Score(const MStyle* s)
-   : _selection(this)
+   : _is(this), _selection(this)
       {
       _parentScore = 0;
       init();
@@ -372,7 +374,7 @@ Score::Score(const MStyle* s)
 //
 
 Score::Score(Score* parent)
-   : _selection(this)
+   : _is(this), _selection(this)
       {
       _parentScore = parent;
       init();
@@ -394,7 +396,7 @@ Score::~Score()
       {
       foreach(MuseScoreView* v, viewer)
             v->removeScore();
-      deselectAll();
+      // deselectAll();
       for (MeasureBase* m = _measures.first(); m;) {
             MeasureBase* nm = m->next();
             delete m;
@@ -424,25 +426,6 @@ Score::~Score()
       }
 
 //---------------------------------------------------------
-//   renumberMeasures
-//---------------------------------------------------------
-
-void Score::renumberMeasures()
-      {
-      int measureNo = 0;
-      for (Measure* measure = firstMeasure(); measure; measure = measure->nextMeasure()) {
-            measureNo += measure->noOffset();
-            measure->setNo(measureNo);
-            if (measure->sectionBreak() && measure->sectionBreak()->startWithMeasureOne())
-                  measureNo = 0;
-            else if (measure->irregular())      // dont count measure
-                  ;
-            else
-                  ++measureNo;
-            }
-      }
-
-//---------------------------------------------------------
 //   elementAdjustReadPos
 //---------------------------------------------------------
 
@@ -468,7 +451,6 @@ void Score::addMeasure(MeasureBase* m, MeasureBase* pos)
 //      - measure ticks
 //      - tempo map
 //      - time signature map
-//      - measure numbers
 //---------------------------------------------------------
 
 /**
@@ -480,8 +462,7 @@ void Score::addMeasure(MeasureBase* m, MeasureBase* pos)
 
 void Score::fixTicks()
       {
-      int number = 0;
-      int tick   = 0;
+      int tick = 0;
       Measure* fm = firstMeasure();
       if (fm == 0)
             return;
@@ -492,7 +473,7 @@ void Score::fixTicks()
       if (!parentScore()) {
             tempomap()->clear();
             smap->clear();
-            smap->add(0, SigEvent(sig,  nsig, number));
+            smap->add(0, SigEvent(sig,  nsig, 0));
             }
 
       for (MeasureBase* mb = first(); mb; mb = mb->next()) {
@@ -500,11 +481,13 @@ void Score::fixTicks()
                   mb->setTick(tick);
                   continue;
                   }
-            Measure* m = static_cast<Measure*>(mb);
+            Measure* m       = static_cast<Measure*>(mb);
             int mtick        = m->tick();
             int diff         = tick - mtick;
             int measureTicks = m->ticks();
             m->moveTicks(diff);
+            if (m->mmRest())
+                  m->mmRest()->moveTicks(diff);
 
             if (!parentScore()) {
                   //
@@ -538,7 +521,7 @@ void Score::fixTicks()
                                     int nn = cr->articulations().size();
                                     for (int ii = 0; ii < nn; ++ii)
                                           stretch = qMax(cr->articulations().at(ii)->timeStretch(), stretch);
-                                    if (stretch != 0.0) {
+                                    if (stretch != 0.0 && stretch != 1.0) {
                                           qreal otempo = tempomap()->tempo(cr->tick());
                                           qreal ntempo = otempo / stretch;
                                           setTempo(cr->tick(), ntempo);
@@ -554,23 +537,11 @@ void Score::fixTicks()
                   }
 
             //
-            // calculate measure number
-            //
-            number += m->noOffset();
-            if (m->no() != number)
-                  m->setNo(number);
-
-            if (m->sectionBreak())
-                  number = 0;
-            else if (!m->irregular())      // dont count measure
-                  ++number;
-
-            //
             // update time signature map
             //
             if (!parentScore() && (m->len() != sig)) {
                   sig = m->len();
-                  smap->add(tick, SigEvent(sig, m->timesig(),  number));
+                  smap->add(tick, SigEvent(sig, m->timesig(),  m->no()));
                   }
             tick += measureTicks;
             }
@@ -904,28 +875,6 @@ bool Score::isSavable() const
       {
       // TODO: check if file can be created if it does not exist
       return info.isWritable() || !info.exists();
-      }
-
-//---------------------------------------------------------
-//   setInputState
-//---------------------------------------------------------
-
-void Score::setInputState(const InputState& st)
-      {
-      _is = st;
-      }
-
-//---------------------------------------------------------
-//   setInputTrack
-//---------------------------------------------------------
-
-void Score::setInputTrack(int v)
-      {
-      if (v < 0) {
-            qDebug("setInputTrack: bad value: %d", v);
-            return;
-            }
-      _is.setTrack(v);
       }
 
 //---------------------------------------------------------
@@ -1307,7 +1256,7 @@ void Score::spatiumChanged(qreal oldValue, qreal newValue)
       scanElements(data, spatiumHasChanged, true);
       foreach (Staff* staff, _staves)
             staff->spatiumChanged(oldValue, newValue);
-      _noteHeadWidth = symbols[_symIdx][quartheadSym].width(newValue / (MScore::DPI * SPATIUM20));
+      _noteHeadWidth = _scoreFont->width(SymId::noteheadBlack, newValue / (MScore::DPI * SPATIUM20));
       }
 
 void Score::setSpatium(qreal v)
@@ -1354,11 +1303,14 @@ Measure* Score::getCreateMeasure(int tick)
 
 void Score::addElement(Element* element)
       {
+#if 0
       if (MScore::debugMode) {
             qDebug("   Score(%p)::addElement %p(%s) parent %p(%s)",
                this, element, element->name(), element->parent(),
                element->parent() ? element->parent()->name() : "");
             }
+#endif
+
       if (element->parent() && element->parent()->type() == Element::SEGMENT)
             static_cast<Segment*>(element->parent())->measure()->setDirty();
 
@@ -1488,12 +1440,14 @@ void Score::removeElement(Element* element)
       {
       Element* parent = element->parent();
 
+#if 0
       if (MScore::debugMode) {
             qDebug("   Score(%p)::removeElement %p(%s) parent %p(%s)",
                this, element, element->name(), parent, parent ? parent->name() : "");
             }
-      if (element->parent() && element->parent()->type() == Element::SEGMENT)
-            static_cast<Segment*>(element->parent())->measure()->setDirty();
+#endif
+      if (parent && parent->type() == Element::SEGMENT)
+            static_cast<Segment*>(parent)->measure()->setDirty();
 
       // special for MEASURE, HBOX, VBOX
       // their parent is not static
@@ -1623,7 +1577,39 @@ Measure* Score::firstMeasure() const
       MeasureBase* mb = _measures.first();
       while (mb && mb->type() != Element::MEASURE)
             mb = mb->next();
+
       return static_cast<Measure*>(mb);
+      }
+
+//---------------------------------------------------------
+//   firstMeasureMM
+//---------------------------------------------------------
+
+Measure* Score::firstMeasureMM() const
+      {
+      MeasureBase* mb = _measures.first();
+      while (mb && mb->type() != Element::MEASURE)
+            mb = mb->next();
+      Measure* m = static_cast<Measure*>(mb);
+      if (m && styleB(ST_createMultiMeasureRests) && m->hasMMRest())
+            return m->mmRest();
+      return m;
+      }
+
+//---------------------------------------------------------
+//   firstMM
+//---------------------------------------------------------
+
+MeasureBase* Score::firstMM() const
+      {
+      MeasureBase* m = _measures.first();
+      if (m
+         && m->type() == Element::MEASURE
+         && styleB(ST_createMultiMeasureRests)
+         && static_cast<Measure*>(m)->hasMMRest()) {
+            return static_cast<Measure*>(m)->mmRest();
+            }
+      return m;
       }
 
 //---------------------------------------------------------
@@ -1669,12 +1655,44 @@ Measure* Score::lastMeasure() const
       }
 
 //---------------------------------------------------------
+//   lastMeasureMM
+//---------------------------------------------------------
+
+Measure* Score::lastMeasureMM() const
+      {
+      MeasureBase* mb = _measures.last();
+      for (; mb; mb = mb->prev()) {
+            if (mb->type() != Element::MEASURE)
+                  continue;
+            if (!styleB(ST_createMultiMeasureRests))
+                  break;
+            Measure* m = static_cast<Measure*>(mb);
+            if (m->mmRestCount() < 0)
+                  continue;
+            if (m->hasMMRest())
+                  mb = m->mmRest();
+            break;
+            }
+      return static_cast<Measure*>(mb);
+      }
+
+//---------------------------------------------------------
 //   firstSegment
 //---------------------------------------------------------
 
 Segment* Score::firstSegment(Segment::SegmentTypes segType) const
       {
       Measure* m = firstMeasure();
+      return m ? m->first(segType) : 0;
+      }
+
+//---------------------------------------------------------
+//   firstSegmentMM
+//---------------------------------------------------------
+
+Segment* Score::firstSegmentMM(Segment::SegmentTypes segType) const
+      {
+      Measure* m = firstMeasureMM();
       return m ? m->first(segType) : 0;
       }
 
@@ -1872,6 +1890,16 @@ QMap<int, LinkedElements*>& Score::links()
       }
 
 //---------------------------------------------------------
+//   setTempomap
+//---------------------------------------------------------
+
+void Score::setTempomap(TempoMap* tm)
+      {
+      delete _tempomap;
+      _tempomap = tm;
+      }
+
+//---------------------------------------------------------
 //   tempomap
 //---------------------------------------------------------
 
@@ -2043,7 +2071,7 @@ void Score::removeExcerpt(Score* score)
 
 void Score::updateNotes()
       {
-      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
+      for (Measure* m = firstMeasureMM(); m; m = m->nextMeasureMM()) {
             for (int staffIdx = 0; staffIdx < nstaves(); ++staffIdx) {
                   AccidentalState tversatz;      // state of already set accidentals for this measure
                   tversatz.init(staff(staffIdx)->keymap()->key(m->tick()));
@@ -2064,7 +2092,7 @@ void Score::updateNotes()
 
 void Score::cmdUpdateNotes()
       {
-      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
+      for (Measure* m = firstMeasureMM(); m; m = m->nextMeasureMM()) {
             for (int staffIdx = 0; staffIdx < nstaves(); ++staffIdx)
                   updateAccidentals(m, staffIdx);
             }
@@ -2080,7 +2108,7 @@ void Score::cmdUpdateAccidentals(Measure* beginMeasure, int staffIdx)
 //      qDebug("cmdUpdateAccidentals m=%d for staff=%d",
 //            beginMeasure->no(), staffIdx);
       Staff* st = staff(staffIdx);
-      for (Measure* m = beginMeasure; m; m = m->nextMeasure()) {
+      for (Measure* m = beginMeasure; m; m = m->nextMeasureMM()) {
             AccidentalState as;
             as.init(st->keymap()->key(m->tick()));
 
@@ -2139,8 +2167,6 @@ Score* Score::clone()
       XmlReader r(buffer.buffer());
       Score* score = new Score(style());
       score->read1(r, true);
-
-      score->renumberMeasures();
 
       int staffIdx = 0;
       foreach(Staff* st, score->staves()) {
@@ -2241,7 +2267,7 @@ bool Score::appendScore(Score* score)
             _measures.add(nmb);
             }
       fixTicks();
-      renumberMeasures();
+      setLayoutAll(true);
       return true;
       }
 
@@ -2264,8 +2290,11 @@ void Score::splitStaff(int staffIdx, int splitPoint)
 
       undoInsertStaff(ns, staffIdx+1);
 
-      for (Measure* m = firstMeasure(); m; m = m->nextMeasure())
+      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
             m->cmdAddStaves(staffIdx+1, staffIdx+2, false);
+            if (m->hasMMRest())
+                  m->mmRest()->cmdAddStaves(staffIdx+1, staffIdx+2, false);
+            }
 
       Clef* clef = new Clef(this);
       clef->setClefType(ClefType::F);
@@ -2275,16 +2304,6 @@ void Score::splitStaff(int staffIdx, int splitPoint)
       undoAddElement(clef);
 
       undoChangeKeySig(ns, 0, s->key(0));
-
-#if 0       // created on layout
-      Bracket* b = new Bracket(this);
-      b->setSubtype(BRACKET_AKKOLADE);
-      b->setTrack(staffIdx * VOICES);
-      b->setParent(firstMeasure()->system());
-      b->setLevel(-1);  // add bracket
-      b->setSpan(2);
-      undoAddElement(b);
-#endif
 
       rebuildMidiMapping();
       _instrumentsChanged = true;
@@ -2399,8 +2418,12 @@ void Score::cmdInsertPart(Part* part, int staffIdx)
 
       int sidx = this->staffIdx(part);
       int eidx = sidx + part->nstaves();
-      for (Measure* m = firstMeasure(); m; m = m->nextMeasure())
+      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
             m->cmdAddStaves(sidx, eidx, true);
+            if (m->hasMMRest())
+                  m->mmRest()->cmdAddStaves(sidx, eidx, true);
+            }
+
       adjustBracketsIns(sidx, eidx);
       }
 
@@ -2414,16 +2437,18 @@ void Score::cmdRemovePart(Part* part)
       int n      = part->nstaves();
       int eidx   = sidx + n;
 
-// qDebug("cmdRemovePart %d-%d", sidx, eidx);
-
       //
       //    adjust measures
       //
-      for (Measure* m = firstMeasure(); m; m = m->nextMeasure())
+      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
             m->cmdRemoveStaves(sidx, eidx);
+            if (m->hasMMRest())
+                  m->mmRest()->cmdRemoveStaves(sidx, eidx);
+            }
 
       for (int i = 0; i < n; ++i)
             cmdRemoveStaff(sidx);
+
       undoRemovePart(part, sidx);
       }
 
@@ -2461,6 +2486,17 @@ void Score::insertStaff(Staff* staff, int idx)
       {
       _staves.insert(idx, staff);
       staff->part()->insertStaff(staff);
+      for (auto i = staff->score()->spanner().cbegin(); i != staff->score()->spanner().cend(); ++i) {
+            Spanner* s = i->second;
+            if (s->staffIdx() >= idx) {
+                  int t = s->track() + VOICES;
+                  s->setTrack(t < ntracks() ? t : ntracks() - 1);
+                  if (s->track2() != -1) {
+                        t = s->track2() + VOICES;
+                        s->setTrack2(t < ntracks() ? t : s->track());
+                        }
+                  }
+            }
       }
 
 //---------------------------------------------------------
@@ -2543,9 +2579,40 @@ void Score::adjustKeySigs(int sidx, int eidx, KeyList km)
 
 void Score::cmdRemoveStaff(int staffIdx)
       {
-      adjustBracketsDel(staffIdx, staffIdx+1);
       Staff* s = staff(staffIdx);
+      adjustBracketsDel(staffIdx, staffIdx+1);
+
+      QList<Spanner*> sl;
+      for (auto i = _spanner.cbegin(); i != _spanner.cend(); ++i) {
+            Spanner* s = i->second;
+            if (s->staffIdx() == staffIdx)
+                  sl.append(s);
+            }
+      for (auto i : sl)
+            undoRemoveElement(i);
+
       undoRemoveStaff(s, staffIdx);
+
+      // remove linked staff and measures in linked staves in excerps
+      // should be done earlier for the main staff
+      if (s->linkedStaves()) {
+            for(Staff* staff : s->linkedStaves()->staves()) {
+                 Score* lscore = staff->score();
+                 if(lscore != this) {
+                       int lstaffIdx = lscore->staffIdx(staff);
+                       int pIndex = lscore->staffIdx(staff->part());
+                       //adjustBracketsDel(lstaffIdx, lstaffIdx+1);
+                       for (Measure* m = lscore->firstMeasure(); m; m = m->nextMeasure()) {
+                              m->cmdRemoveStaves(lstaffIdx, lstaffIdx + 1);
+                              if (m->hasMMRest())
+                                    m->mmRest()->cmdRemoveStaves(lstaffIdx, lstaffIdx + 1);
+                              }
+                        undoRemoveStaff(staff, lstaffIdx);
+                        if (staff->part()->nstaves() == 0)
+                              undoRemovePart(staff->part(), pIndex);
+                        }
+                  }
+            }
       }
 
 //---------------------------------------------------------
@@ -2554,6 +2621,18 @@ void Score::cmdRemoveStaff(int staffIdx)
 
 void Score::removeStaff(Staff* staff)
       {
+      int idx = staffIdx(staff);
+      for (auto i = staff->score()->spanner().cbegin(); i != staff->score()->spanner().cend(); ++i) {
+            Spanner* s = i->second;
+            if (s->staffIdx() > idx) {
+                  int t = s->track() - VOICES;
+                  s->setTrack(t >=0 ? t : 0);
+                  if (s->track2() != -1) {
+                        t = s->track2() - VOICES;
+                        s->setTrack2(t >=0 ? t : s->track());
+                        }
+                  }
+            }
       _staves.removeAll(staff);
       staff->part()->removeStaff(staff);
       }
@@ -2568,7 +2647,7 @@ void Score::sortStaves(QList<int>& dst)
       _parts.clear();
       Part* curPart = 0;
       QList<Staff*> dl;
-      foreach(int idx, dst) {
+      foreach (int idx, dst) {
             Staff* staff = _staves[idx];
             if (staff->part() != curPart) {
                   curPart = staff->part();
@@ -2580,11 +2659,21 @@ void Score::sortStaves(QList<int>& dst)
             }
       _staves = dl;
 
-      for (MeasureBase* mb = _measures.first(); mb; mb = mb->next()) {
-            if (mb->type() != Element::MEASURE)
-                  continue;
-            Measure* m = static_cast<Measure*>(mb);
+      for (Measure* m = firstMeasure(); m; m = m->nextMeasure()) {
             m->sortStaves(dst);
+            if (m->hasMMRest())
+                  m->mmRest()->sortStaves(dst);
+            }
+      for (auto i : _spanner.map()) {
+            Spanner* sp = i.second;
+            int voice    = sp->voice();
+            int staffIdx = sp->staffIdx();
+            int idx = dst.indexOf(staffIdx);
+            if (idx >=0) {
+                  sp->setTrack(idx * VOICES + voice);
+                  if (sp->track2() != -1)
+                        sp->setTrack2(idx * VOICES +(sp->track2() % VOICES)); // at least keep the voice...
+                  }
             }
       }
 
@@ -2664,7 +2753,7 @@ void Score::padToggle(int n)
                   _is.setDuration(TDuration::V_128TH);
                   break;
             case PAD_REST:
-                  _is.rest = !_is.rest;
+                  _is.setRest(!_is.rest());
                   break;
             case PAD_DOT:
                   if (_is.duration().dots() == 1)
@@ -2686,7 +2775,7 @@ void Score::padToggle(int n)
             // rest flag
             //
             if (noteEntryMode())
-                  _is.rest = false;
+                  _is.setRest(false);
             }
 
       if (noteEntryMode() || !selection().isSingle()) {
@@ -2723,63 +2812,6 @@ void Score::padToggle(int n)
       }
 
 //---------------------------------------------------------
-//   setInputState
-//---------------------------------------------------------
-
-void Score::setInputState(Element* e)
-      {
-// qDebug("setInputState %s", e ? e->name() : "--");
-
-      if (e == 0)
-            return;
-      if (e && e->type() == Element::CHORD)
-            e = static_cast<Chord*>(e)->upNote();
-
-      _is.setDrumNote(-1);
-//      _is.setDrumset(0);
-      if (e->type() == Element::NOTE) {
-            Note* note    = static_cast<Note*>(e);
-            Chord* chord  = note->chord();
-            _is.setDuration(chord->durationType());
-            _is.rest      = false;
-            _is.setTrack(note->track());
-            _is.noteType  = note->noteType();
-            _is.beamMode  = chord->beamMode();
-            }
-      else if (e->type() == Element::REST) {
-            Rest* rest   = static_cast<Rest*>(e);
-            if (rest->durationType().type() == TDuration::V_MEASURE)
-                  _is.setDuration(TDuration::V_QUARTER);
-            else
-                  _is.setDuration(rest->durationType());
-            _is.rest     = true;
-            _is.setTrack(rest->track());
-            _is.beamMode = rest->beamMode();
-            _is.noteType = NOTE_NORMAL;
-            }
-      else {
-/*            _is.rest     = false;
-            _is.setDots(0);
-            _is.setDuration(TDuration::V_INVALID);
-            _is.noteType = NOTE_INVALID;
-            _is.beamMode = BEAM_INVALID;
-            _is.noteType = NOTE_NORMAL;
-*/
-            }
-      if (e->type() == Element::NOTE || e->type() == Element::REST) {
-            const Instrument* instr   = e->staff()->part()->instr();
-            if (instr->useDrumset()) {
-                  if (e->type() == Element::NOTE)
-                        _is.setDrumNote(static_cast<Note*>(e)->pitch());
-                  else
-                        _is.setDrumNote(-1);
-//                  _is.setDrumset(instr->drumset());
-                  }
-            }
-//      mscore->updateInputState(this);
-      }
-
-//---------------------------------------------------------
 //   deselect
 //---------------------------------------------------------
 
@@ -2800,7 +2832,7 @@ void Score::select(Element* e, SelectType type, int staffIdx)
             Element* ee = e;
             if (ee->type() == Element::NOTE)
                   ee = ee->parent();
-            setPlayPos(static_cast<ChordRest*>(ee)->segment()->tick());
+            setPos(POS::CURRENT, static_cast<ChordRest*>(ee)->segment()->tick());
             }
       if (MScore::debugMode)
             qDebug("select element <%s> type %d(state %d) staff %d",
@@ -2825,8 +2857,10 @@ void Score::select(Element* e, SelectType type, int staffIdx)
                   selState = SEL_LIST;
                   if (e->type() == Element::NOTE)
                         e = e->parent();
-                  if (e->type() == Element::REST || e->type() == Element::CHORD)
+                  if (e->type() == Element::REST || e->type() == Element::CHORD) {
+                        _is.setLastSegment(_is.segment());
                         _is.setSegment(static_cast<ChordRest*>(e)->segment());
+                        }
                   }
             _selection.setActiveSegment(0);
             _selection.setActiveTrack(0);
@@ -2835,10 +2869,11 @@ void Score::select(Element* e, SelectType type, int staffIdx)
             if (e->type() == Element::MEASURE) {
                   Measure* m = static_cast<Measure*>(e);
                   int tick  = m->tick();
-                  int etick = tick + m->ticks();
+                  // int etick = tick + m->ticks();
                   if (_selection.state() == SEL_NONE) {
                         _selection.setStartSegment(m->tick2segment(tick));
-                        _selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                        // _selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                        _selection.setEndSegment(m == lastMeasure() ? 0 : m->last());
                         }
                   else {
                         select(0, SELECT_SINGLE, 0);
@@ -2878,7 +2913,8 @@ void Score::select(Element* e, SelectType type, int staffIdx)
                         _selection.setStaffStart(staffIdx);
                         _selection.setStaffEnd(staffIdx + 1);
                         _selection.setStartSegment(m->tick2segment(tick));
-                        _selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                        // _selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                        _selection.setEndSegment(m == lastMeasure() ? 0 : m->last());
                         }
                   else if (_selection.state() == SEL_RANGE) {
                         if (staffIdx < _selection.staffStart())
@@ -2890,14 +2926,16 @@ void Score::select(Element* e, SelectType type, int staffIdx)
                               activeIsFirst = true;
                               }
                         else if (etick >= _selection.tickEnd())
-                              _selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                              //_selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                              _selection.setEndSegment(m == lastMeasure() ? 0 : m->last());
                         else {
                               if (_selection.activeSegment() == _selection.startSegment()) {
                                     _selection.setStartSegment(m->tick2segment(tick));
                                     activeIsFirst = true;
                                     }
                               else
-                                    _selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                                    //_selection.setEndSegment(m == lastMeasure() ? 0 : tick2segment(etick));
+                                    _selection.setEndSegment(m == lastMeasure() ? 0 : m->last());
                               }
                         }
                   else if (_selection.isSingle()) {
@@ -2924,9 +2962,9 @@ void Score::select(Element* e, SelectType type, int staffIdx)
                               if (el && el->isChordRest())
                                     break;
                               if (reverse)
-                                    seg = seg->prev1();
+                                    seg = seg->prev1MM();
                               else
-                                    seg = seg->next1();
+                                    seg = seg->next1MM();
                               if (!seg)
                                     break;
                               }
@@ -3218,19 +3256,15 @@ qreal Score::loHeight() const
 
 void Score::cmdSelectAll()
       {
-      MeasureBase* mb = _measures.last();
-      if (mb) {   // check for empty score
-            _selection.setState(SEL_RANGE);
-            int tick = mb->tick();
-            if (mb->type() == Element::MEASURE)
-                  tick += static_cast<Measure*>(mb)->ticks();
-            Segment* s1 = tick2segment(0);
-            Segment* s2 = tick2segment(tick);
-            _selection.setRange(s1, s2, 0, nstaves());
-            _selection.updateSelectedElements();
-            setUpdateAll(true);
-            end();
-            }
+      if (_measures.size() == 0)
+            return;
+      _selection.setState(SEL_RANGE);
+      Segment* s1 = firstMeasureMM()->first();
+      Segment* s2 = lastMeasureMM()->last();
+      _selection.setRange(s1, s2, 0, nstaves());
+      _selection.updateSelectedElements();
+      setUpdateAll(true);
+      end();
       }
 
 //---------------------------------------------------------
@@ -3467,11 +3501,13 @@ bool Score::isSpannerStartEnd(int tick, int track) const
       }
 
 //---------------------------------------------------------
-//   insertTime
+//   undoInsertTime
+//   acts on the linked scores as well
 //---------------------------------------------------------
 
-void Score::insertTime(int tick, int len)
+void Score::undoInsertTime(int tick, int len)
       {
+      qDebug() << "insertTime" << len << "at tick" << tick;
       if (len == 0)
             return;
 
@@ -3488,12 +3524,14 @@ void Score::insertTime(int tick, int len)
                         //
                         undoChangeProperty(s, P_SPANNER_TICK2, s->tick2() + len);
                        }
-                  else if (tick < s->tick()) {
+                  else if (tick <= s->tick()) {
                         //
                         //  case b:
                         //       +----spanner--------
                         //  +---add---
-                        //
+                        // and
+                        //            +----spanner--------
+                        //  +---add---+
                         undoChangeProperty(s, P_SPANNER_TICK, s->tick() + len);
                         undoChangeProperty(s, P_SPANNER_TICK2, s->tick2() + len);
                         }
@@ -3547,37 +3585,51 @@ void Score::insertTime(int tick, int len)
                         }
                   }
             }
+            // insert time in (key, clef) maps
+            undo(new InsertTime(this, tick, len));
       }
 
 
+void Score::insertTime(int tick, int len)
+      {
+      for (Score* score : scoreList()) {
+            for(Staff* staff : score->staves()) {
+                  KeyList* kl = staff->keymap();
+                  KeyList kl2;
+                  for (auto i = kl->upper_bound(tick); i != kl->end();) {
+                        KeySigEvent kse = i->second;
+                        int key = i->first;
+                        kl->erase(i++);
+                        kl2[key + len] = kse;
+                        }
+                  kl->insert(kl2.begin(), kl2.end());
+
+                  ClefList* cl = staff->clefList();
+                  ClefList cl2;
+                  for (auto i = cl->upper_bound(tick); i != cl->end();) {
+                        ClefTypeList ctl = i->second;
+                        int key = i->first;
+                        cl->erase(i++);
+                        cl2[key + len] = ctl;
+                        }
+                  cl->insert(cl2.begin(), cl2.end());
+                  }
+            }
+      }
+
 //---------------------------------------------------------
-//   set Loop In position
+//   setPos
 //---------------------------------------------------------
 
-void Score::setLoopInTick(int tick)
+void Score::setPos(POS pos, int tick)
       {
-      qDebug ("setLoopInTick : tick = %d", tick);
-      if(!lastMeasure())
-            return;
-      if ((tick < 0) || (tick > lastMeasure()->endTick()-1))
+      if (tick < 0)
             tick = 0;
-      _loopInTick = tick;
+      if (tick != _pos[int(pos)]) {
+            _pos[int(pos)] = tick;
+            emit posChanged(pos, unsigned(tick));
+            }
       }
 
-//---------------------------------------------------------
-//   set Loop Out position
-//---------------------------------------------------------
-
-void Score::setLoopOutTick(int tick)
-      {
-      qDebug ("setLoopOutTick : tick = %d", tick);
-      if(!lastMeasure())
-            return;
-      int lastTick = lastMeasure()->endTick()-1;
-      if ((tick > lastTick) || (tick < 0))
-            _loopOutTick = lastTick;
-      else
-            _loopOutTick = tick;
-      }
 }
 

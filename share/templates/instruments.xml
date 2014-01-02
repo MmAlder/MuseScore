@@ -9,6 +9,9 @@
       <Genre id="orchestra">
             <name>Orchestral instruments</name>
       </Genre>
+      <Genre id="earlymusic">
+            <name>Early Music</name>
+      </Genre>
       <Genre id="ethnic">
             <name>Ethnic instruments</name>
       </Genre>
@@ -372,6 +375,7 @@
                   <Channel>
                         <program value="79"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="soprano-gemshorn">
                   <longName>Soprano Gemshorn</longName>
@@ -385,6 +389,7 @@
                   <Channel>
                         <program value="79"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-gemshorn">
                   <longName>Alto Gemshorn</longName>
@@ -398,6 +403,7 @@
                   <Channel>
                         <program value="79"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-gemshorn">
                   <longName>Tenor Gemshorn</longName>
@@ -411,6 +417,7 @@
                   <Channel>
                         <program value="79"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="bass-gemshorn">
                   <longName>Bass Gemshorn</longName>
@@ -424,6 +431,7 @@
                   <Channel>
                         <program value="79"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ocarina">
                   <longName>Ocarina</longName>
@@ -675,6 +683,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="sopranino-recorder">
                   <longName>Sopranino Recorder</longName>
@@ -688,6 +697,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="soprano-recorder">
                   <longName>Soprano Recorder</longName>
@@ -701,6 +711,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-recorder">
                   <longName>Alto Recorder</longName>
@@ -714,6 +725,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-recorder">
                   <longName>Tenor Recorder</longName>
@@ -727,6 +739,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="bass-recorder">
                   <longName>Bass Recorder</longName>
@@ -740,6 +753,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="contrabass-recorder">
                   <longName>Contrabass Recorder</longName>
@@ -753,6 +767,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="greatbass-recorder">
                   <longName>Greatbass Recorder</longName>
@@ -766,6 +781,7 @@
                   <Channel>
                         <program value="74"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="slide-whistle">
                   <longName>Slide Whistle</longName>
@@ -861,6 +877,7 @@
                   <Channel>
                         <program value="69"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="oboe-d'amore">
                   <longName>Oboe d'amore</longName>
@@ -892,6 +909,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="english-horn">
                   <longName>English Horn</longName>
@@ -975,6 +993,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="soprano-shawm">
                   <longName>Soprano Shawm</longName>
@@ -988,6 +1007,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-shawm">
                   <longName>Alto Shawm</longName>
@@ -1001,6 +1021,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-shawm">
                   <longName>Tenor Shawm</longName>
@@ -1014,6 +1035,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="bass-shawm">
                   <longName>Bass Shawm</longName>
@@ -1027,6 +1049,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="great-bass-shawm">
                   <longName>Great Bass Shawm</longName>
@@ -1040,6 +1063,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="cromorne">
                   <longName>Cromorne</longName>
@@ -1053,6 +1077,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="crumhorn">
                   <longName>Crumhorn</longName>
@@ -1066,6 +1091,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="soprano-crumhorn">
                   <longName>Soprano Crumhorn</longName>
@@ -1079,6 +1105,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-crumhorn">
                   <longName>Alto Crumhorn</longName>
@@ -1092,6 +1119,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-crumhorn">
                   <longName>Tenor Crumhorn</longName>
@@ -1105,6 +1133,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="bass-crumhorn">
                   <longName>Bass Crumhorn</longName>
@@ -1118,6 +1147,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="greatbass-crumhorn">
                   <longName>Greatbass Crumhorn</longName>
@@ -1131,6 +1161,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="cornamuse">
                   <longName>Cornamuse</longName>
@@ -1679,6 +1710,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="sopranino-chalumeau">
                   <longName>Sopranino Chalumeau</longName>
@@ -1692,6 +1724,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="soprano-chalumeau">
                   <longName>Soprano Chalumeau</longName>
@@ -1705,6 +1738,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-chalumeau">
                   <longName>Alto Chalumeau</longName>
@@ -1718,6 +1752,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-chalumeau">
                   <longName>Tenor Chalumeau</longName>
@@ -1731,6 +1766,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="bass-chalumeau">
                   <longName>Bass Chalumeau</longName>
@@ -1744,6 +1780,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tarogato">
                   <longName>Tarogato</longName>
@@ -1831,6 +1868,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="rackett">
                   <longName>Rackett</longName>
@@ -1844,6 +1882,7 @@
                   <Channel>
                         <program value="67"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="sarrusophone">
                   <longName>Sarrusophone</longName>
@@ -3163,6 +3202,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="f-baroque-trumpet">
                   <longName>Baroque Trumpet in F</longName>
@@ -3178,6 +3218,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="eb-baroque-trumpet">
                   <longName>Baroque Trumpet in E♭</longName>
@@ -3193,6 +3234,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="d-baroque-trumpet">
                   <longName>Baroque Trumpet in D</longName>
@@ -3208,6 +3250,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="c-baroque-trumpet">
                   <longName>Baroque Trumpet in C</longName>
@@ -3221,6 +3264,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="bb-baroque-trumpet">
                   <longName>Baroque Trumpet in B♭</longName>
@@ -3236,6 +3280,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="rag-dung">
                   <longName>Rag Dung</longName>
@@ -3495,6 +3540,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="cornett">
                   <longName>Cornett</longName>
@@ -3508,6 +3554,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="soprano-cornett">
                   <longName>Soprano Cornett</longName>
@@ -3521,6 +3568,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-cornett">
                   <longName>Alto Cornett</longName>
@@ -3534,6 +3582,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-cornett">
                   <longName>Tenor Cornett</longName>
@@ -3547,6 +3596,7 @@
                   <Channel>
                         <program value="56"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="serpent">
                   <longName>Serpent</longName>
@@ -3561,6 +3611,7 @@
                         <program value="56"/>
                   </Channel>
                   <genre>orchestra</genre>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="trombone">
                   <longName>Trombone</longName>
@@ -6706,6 +6757,7 @@
                   <Channel>
                         <program value="7"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="harpsichord">
                   <longName>Harpsichord</longName>
@@ -6725,6 +6777,7 @@
                   </Channel>
                   <genre>common</genre>
                   <genre>orchestra</genre>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="virginal">
                   <longName>Virginal</longName>
@@ -6742,6 +6795,7 @@
                   <Channel>
                         <program value="6"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="celesta">
                   <longName>Celesta</longName>
@@ -7785,14 +7839,14 @@
                   <shortName>Bj.</shortName>
                   <description>5 string Banjo</description>
                   <musicXMLid>pluck.banjo</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>79</string>
                         <string>50</string>
                         <string>55</string>
                         <string>59</string>
                         <string>62</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>48-87</aPitchRange>
@@ -7877,7 +7931,7 @@
                   <shortName>Guit.</shortName>
                   <description>Acoustic Nylon-strung Guitar</description>
                   <musicXMLid>pluck.guitar.nylon-string</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>19</frets>
                         <string>40</string>
                         <string>45</string>
@@ -7885,7 +7939,7 @@
                         <string>55</string>
                         <string>59</string>
                         <string>64</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>40-83</aPitchRange>
@@ -7909,7 +7963,7 @@
                   <shortName>Guit.</shortName>
                   <description>Acoustic Steel-strung Guitar</description>
                   <musicXMLid>pluck.guitar.acoustic</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>19</frets>
                         <string>40</string>
                         <string>45</string>
@@ -7917,7 +7971,7 @@
                         <string>55</string>
                         <string>59</string>
                         <string>64</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>40-83</aPitchRange>
@@ -7985,15 +8039,15 @@
                   <shortName>El. Guit.</shortName>
                   <description>Electric Guitar</description>
                   <musicXMLid>pluck.guitar.electric</musicXMLid>
-                  <Tablature>
-                        <frets>19</frets>
+                  <StringData>
+                        <frets>24</frets>
                         <string>40</string>
                         <string>45</string>
                         <string>50</string>
                         <string>55</string>
                         <string>59</string>
                         <string>64</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>40-86</aPitchRange>
@@ -8006,7 +8060,7 @@
             </Instrument>
             <Instrument id="electric-guitar-tablature">
                   <trackName>Electric Guitar [Tablature]</trackName>
-                  <init>electric-guitar-strung</init>
+                  <init>electric-guitar</init>
                   <description>Electric Guitar (Tablature)</description>
                   <stafftype staffTypePreset="tab6StrCommon">tablature</stafftype>
                   <clef>TAB</clef>
@@ -8050,7 +8104,7 @@
                   <shortName>Lute</shortName>
                   <description>Lute</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8058,7 +8112,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>33-79</aPitchRange>
@@ -8066,6 +8120,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="lute-tablature">
                   <trackName>Lute [Tablature]</trackName>
@@ -8074,6 +8129,7 @@
                   <musicXMLid>pluck.lute</musicXMLid>
                   <stafftype staffTypePreset="tab6StrFrench">tablature</stafftype>
                   <clef>TAB</clef>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ren.-tenor-lute-5-course">
                   <longName>Lute</longName>
@@ -8081,14 +8137,14 @@
                   <trackName>Lute 5 course</trackName>
                   <description>Ren. Tenor Lute (5 course)</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>48</string>
                         <string>53</string>
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>48-79</aPitchRange>
@@ -8096,6 +8152,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ren.-tenor-lute-6-course">
                   <longName>Lute</longName>
@@ -8103,7 +8160,7 @@
                   <trackName>Lute 6 course</trackName>
                   <description>Ren. Tenor Lute (6 course)</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8111,7 +8168,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>43-79</aPitchRange>
@@ -8119,6 +8176,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ren.-tenor-lute-7-course">
                   <longName>Lute</longName>
@@ -8133,6 +8191,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ren.-tenor-lute-8-course">
                   <longName>Lute</longName>
@@ -8140,7 +8199,7 @@
                   <trackName>Lute 8 course</trackName>
                   <description>Ren. Tenor Lute (8 course)</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8148,7 +8207,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>38-79</aPitchRange>
@@ -8156,6 +8215,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ren.-tenor-lute-9-course">
                   <longName>Lute</longName>
@@ -8163,7 +8223,7 @@
                   <trackName>Lute 9 course</trackName>
                   <description>Ren. Tenor Lute (9 course)</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8171,7 +8231,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>38-79</aPitchRange>
@@ -8179,6 +8239,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="ren.-tenor-lute-10-course">
                   <longName>Lute</longName>
@@ -8186,7 +8247,7 @@
                   <trackName>Lute 10 course</trackName>
                   <description>Ren. Tenor Lute (10 course)</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8194,7 +8255,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>36-79</aPitchRange>
@@ -8202,6 +8263,7 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="baroque-lute-13-course">
                   <longName>Lute</longName>
@@ -8209,7 +8271,7 @@
                   <trackName>Lute 13 course</trackName>
                   <description>Baroque Lute (13 course)</description>
                   <musicXMLid>pluck.lute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>45</string>
                         <string>50</string>
@@ -8217,7 +8279,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>65</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>33-77</aPitchRange>
@@ -8225,13 +8287,14 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="archlute-14-course">
                   <longName>Archlute</longName>
                   <shortName>A. Lute</shortName>
                   <description>Archlute (14 course)</description>
                   <musicXMLid>pluck.archlute</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8239,7 +8302,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>33-77</aPitchRange>
@@ -8247,13 +8310,14 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="theorbo-15-course">
                   <longName>Theorbo</longName>
                   <shortName>Thb.</shortName>
                   <description>Theorbo (15 course)</description>
                   <musicXMLid>pluck.theorbo</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>45</string>
                         <string>49</string>
@@ -8261,7 +8325,7 @@
                         <string>59</string>
                         <string>52</string>
                         <string>57</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>33-71</aPitchRange>
@@ -8269,19 +8333,20 @@
                   <Channel>
                         <program value="25"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="mandolin">
                   <longName>Mandolin</longName>
                   <shortName>Mdn.</shortName>
                   <description>Mandolin</description>
                   <musicXMLid>pluck.mandolin</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>55</string>
                         <string>62</string>
                         <string>69</string>
                         <string>76</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>55-85</aPitchRange>
@@ -8294,13 +8359,13 @@
                   <longName>Mandola</longName>
                   <shortName>Mda.</shortName>
                   <description>Mandola</description>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>48</string>
                         <string>55</string>
                         <string>62</string>
                         <string>69</string>
-                  </Tablature>
+                  </StringData>
                   <clef>C3</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>48-87</aPitchRange>
@@ -8314,13 +8379,13 @@
                   <shortName>Mda.</shortName>
                   <description>Mandola Viola tuning</description>
                   <musicXMLid>pluck.mandola</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>48</string>
                         <string>55</string>
                         <string>62</string>
                         <string>69</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>48-87</aPitchRange>
@@ -8334,13 +8399,13 @@
                   <shortName>Mda.</shortName>
                   <description>Mandola 8va mandolin tuning</description>
                   <musicXMLid>pluck.mandola</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>43</string>
                         <string>50</string>
                         <string>57</string>
                         <string>64</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>48-87</aPitchRange>
@@ -8354,13 +8419,13 @@
                   <shortName>Mncl.</shortName>
                   <description>Mandocello</description>
                   <musicXMLid>pluck.mandocello</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>36</string>
                         <string>43</string>
                         <string>50</string>
                         <string>57</string>
-                  </Tablature>
+                  </StringData>
                   <clef>F</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>36-75</aPitchRange>
@@ -8374,13 +8439,13 @@
                   <shortName>OM.</shortName>
                   <description>Octave Mandolin</description>
                   <musicXMLid>pluck.mandolin.octave</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>43</string>
                         <string>50</string>
                         <string>57</string>
                         <string>64</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>43-73</aPitchRange>
@@ -8422,13 +8487,13 @@
                   <shortName>Uk.</shortName>
                   <description>Ukulele</description>
                   <musicXMLid>pluck.ukulele</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>18</frets>
                         <string>67</string>
                         <string>60</string>
                         <string>64</string>
                         <string>69</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>60-81</aPitchRange>
@@ -8440,6 +8505,7 @@
             <Instrument id="ukulele-4-str-tab">
                   <longName>Ukulele (Tablature)</longName>
                   <shortName>Uk.</shortName>
+                  <trackName>Ukulele (Tablature)</trackName>
                   <init>ukulele</init>
                   <description>Ukulele (4-str. TAB)</description>
                   <musicXMLid>pluck.ukulele</musicXMLid>
@@ -8451,13 +8517,13 @@
                   <shortName>Ten. Uk.</shortName>
                   <description>Tenor Ukulele</description>
                   <musicXMLid>pluck.ukulele.tenor</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>18</frets>
                         <string>67</string>
                         <string>60</string>
                         <string>64</string>
                         <string>69</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>60-81</aPitchRange>
@@ -8471,7 +8537,14 @@
                   <shortName>Bar. Uk.</shortName>
                   <description>Baritone Ukulele</description>
                   <musicXMLid>pluck.ukulele</musicXMLid>
-                  <clef>G</clef>
+                  <StringData>
+                        <frets>18</frets>
+                        <string>50</string>
+                        <string>55</string>
+                        <string>57</string>
+                        <string>64</string>
+                  </StringData>
+                  <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>50-76</aPitchRange>
                   <pPitchRange>50-76</pPitchRange>
@@ -8484,13 +8557,13 @@
                   <shortName>B. Guit.</shortName>
                   <description>Bass Guitar</description>
                   <musicXMLid>pluck.bass</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>28</string>
                         <string>33</string>
                         <string>38</string>
                         <string>43</string>
-                  </Tablature>
+                  </StringData>
                   <clef>F8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>28-65</aPitchRange>
@@ -8522,6 +8595,7 @@
                   <Channel>
                         <program value="32"/>
                   </Channel>
+                  <genre>common</genre>
                   <genre>jazz</genre>
             </Instrument>
             <Instrument id="electric-bass">
@@ -8529,13 +8603,13 @@
                   <shortName>El. B.</shortName>
                   <description>Electric Bass</description>
                   <musicXMLid>pluck.bass.electric</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>28</string>
                         <string>33</string>
                         <string>38</string>
                         <string>43</string>
-                  </Tablature>
+                  </StringData>
                   <clef>F8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>28-65</aPitchRange>
@@ -8560,13 +8634,13 @@
                   <shortName>Frtl. El. B.</shortName>
                   <description>Fretless Electric Bass</description>
                   <musicXMLid>pluck.bass.fretless</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>24</frets>
                         <string>28</string>
                         <string>33</string>
                         <string>38</string>
                         <string>43</string>
-                  </Tablature>
+                  </StringData>
                   <clef>F8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>28-65</aPitchRange>
@@ -8721,13 +8795,14 @@
                   <Channel>
                         <program value="40"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="treble-viol">
                   <longName>Treble Viol</longName>
                   <shortName>Tr. vl.</shortName>
                   <description>Treble Viol</description>
                   <musicXMLid>strings.viol.treble</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>50</string>
                         <string>55</string>
@@ -8735,7 +8810,7 @@
                         <string>64</string>
                         <string>69</string>
                         <string>74</string>
-                  </Tablature>
+                  </StringData>
                   <clef>G</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>50-86</aPitchRange>
@@ -8743,13 +8818,14 @@
                   <Channel>
                         <program value="40"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="alto-viol">
                   <longName>Alto Viol</longName>
                   <shortName>A. Vl.</shortName>
                   <description>Alto Viol (a smaller version of the tenor viol tuned higher)</description>
                   <musicXMLid>strings.viol.alto</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>45</string>
                         <string>50</string>
@@ -8757,7 +8833,7 @@
                         <string>59</string>
                         <string>64</string>
                         <string>69</string>
-                  </Tablature>
+                  </StringData>
                   <clef>C3</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>45-81</aPitchRange>
@@ -8765,13 +8841,14 @@
                   <Channel>
                         <program value="41"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="tenor-viol">
                   <longName>Tenor Viol</longName>
                   <shortName>T. Vl.</shortName>
                   <description>Tenor Viol</description>
                   <musicXMLid>strings.viol.tenor</musicXMLid>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
                         <string>43</string>
                         <string>48</string>
@@ -8779,7 +8856,7 @@
                         <string>57</string>
                         <string>62</string>
                         <string>67</string>
-                  </Tablature>
+                  </StringData>
                   <clef>C3</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>43-79</aPitchRange>
@@ -8787,20 +8864,22 @@
                   <Channel>
                         <program value="41"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="viola-da-gamba">
                   <longName>Viola da gamba</longName>
                   <shortName>Vla. d. g.</shortName>
                   <description>Viola da gamba</description>
-                  <Tablature>
+                  <StringData>
                         <frets>13</frets>
+                        <string>33</string>
                         <string>38</string>
                         <string>43</string>
                         <string>48</string>
                         <string>52</string>
                         <string>57</string>
                         <string>62</string>
-                  </Tablature>
+                  </StringData>
                   <clef>F</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>33-74</aPitchRange>
@@ -8808,6 +8887,7 @@
                   <Channel>
                         <program value="42"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
             <Instrument id="viola-da-gamba-tablature">
                   <longName>Viola da gamba (Tab)</longName>
@@ -8817,6 +8897,7 @@
                   <description>Viola da gamba (Tablature)</description>
                   <stafftype staffTypePreset="tab6StrFrench">tablature</stafftype>
                   <clef>TAB</clef>
+                  <genre>earlymusic</genre>
             </Instrument>
             <!-- Viola da Gamba (6 string) removed as a duplication -->
             <Instrument id="violone">
@@ -8831,6 +8912,7 @@
                   <Channel>
                         <program value="43"/>
                   </Channel>
+                  <genre>earlymusic</genre>
             </Instrument>
       </InstrumentGroup>
 </museScore>

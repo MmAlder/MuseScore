@@ -300,7 +300,6 @@ void Beam::layout1()
             maxMove = -1000;
             isGrace = false;
 
-            int upCount = 0;
             int mUp     = 0;
             int mDown   = 0;
             int upDnLimit = staff()->lines() - 1;           // was '4' hard-coded in following code
@@ -308,8 +307,6 @@ void Beam::layout1()
             foreach (ChordRest* cr, _elements) {
                   if (cr->type() == CHORD) {
                         c2 = static_cast<Chord*>(cr);
-                        if (c2->line() != upDnLimit)
-                              upCount += c2->up() ? 1 : -1;
                         if (c1 == 0)
                               c1 = c2;
                         int i = c2->staffMove();
@@ -318,11 +315,11 @@ void Beam::layout1()
                         if (i > maxMove)
                               maxMove = i;
                         int line = c2->upLine();
-                        if ((line - upDnLimit) > mUp)
-                              mUp = line - upDnLimit;
+                        if ((upDnLimit - line) > mUp)
+                              mUp = upDnLimit - line;
                         line = c2->downLine();
-                        if (upDnLimit - line > mDown)
-                              mDown = upDnLimit - line;
+                        if (line - upDnLimit > mDown)
+                              mDown = line - upDnLimit;
                         }
                   if (!maxDuration.isValid() || (maxDuration < cr->durationType()))
                         maxDuration = cr->durationType();
@@ -339,8 +336,10 @@ void Beam::layout1()
                         _up = !(c1->voice() % 2);
                   else if (!twoBeamedNotes()) {
                         // highest or lowest note determines stem direction
+                        // interval higher is bigger -> downstem
+                        // interval lower is  bigger -> upstem
                         // down-stems is preferred if equal
-                        _up = mUp > mDown;
+                        _up = mUp < mDown;
                         }
                   }
 
@@ -1612,7 +1611,7 @@ void Beam::layout2(QList<ChordRest*>crl, SpannerSegmentType, int frag)
                   else {
                         // create broken segment
                         int n = crl.size();
-                        qreal len = point(score()->styleS(ST_beamMinLen));
+                        qreal len = beamMinLen;
                         //
                         // find direction (by default, segment points to right)
                         //
@@ -1622,7 +1621,7 @@ void Beam::layout2(QList<ChordRest*>crl, SpannerSegmentType, int frag)
                               ;
                         else if (c1 == n - 1)       // last => point to left
                               len = -len;
-                        else {
+                        else if (!(cr1->isGrace())) {
                               // if inside group
                               // PRO: this algorithm is simple(r) and finds the right direction in
                               // the great majority of cases, without attempting to 'understand'

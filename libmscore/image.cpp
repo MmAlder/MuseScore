@@ -251,32 +251,36 @@ void Image::draw(QPainter* painter) const
                   svgDoc->render(painter, bbox());
             }
       else if (imageType == IMAGE_RASTER) {
-            painter->save();
-            QSizeF s;
-            if (_sizeIsSpatium)
-                  s = _size * spatium();
-            else
-                  s = _size * MScore::DPMM;
-            if (score()->printing()) {
-                  // use original image size for printing
-                  painter->scale(s.width() / rasterDoc->width(), s.height() / rasterDoc->height());
-                  painter->drawPixmap(QPointF(0, 0), QPixmap::fromImage(*rasterDoc));
-                  }
+            if (rasterDoc == nullptr)
+                  emptyImage = true;
             else {
-                  QTransform t = painter->transform();
-                  QSize ss = QSizeF(s.width() * t.m11(), s.height() * t.m22()).toSize();
-                  t.setMatrix(1.0, t.m12(), t.m13(), t.m21(), 1.0, t.m23(), t.m31(), t.m32(), t.m33());
-                  painter->setWorldTransform(t);
-                  if ((buffer.size() != ss || _dirty) && rasterDoc && !rasterDoc->isNull()) {
-                        buffer = QPixmap::fromImage(rasterDoc->scaled(ss, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
-                        _dirty = false;
-                        }
-                  if (buffer.isNull())
-                        emptyImage = true;
+                  painter->save();
+                  QSizeF s;
+                  if (_sizeIsSpatium)
+                        s = _size * spatium();
                   else
-                        painter->drawPixmap(QPointF(0.0, 0.0), buffer);
+                        s = _size * MScore::DPMM;
+                  if (score()->printing()) {
+                        // use original image size for printing
+                        painter->scale(s.width() / rasterDoc->width(), s.height() / rasterDoc->height());
+                        painter->drawPixmap(QPointF(0, 0), QPixmap::fromImage(*rasterDoc));
+                        }
+                  else {
+                        QTransform t = painter->transform();
+                        QSize ss = QSizeF(s.width() * t.m11(), s.height() * t.m22()).toSize();
+                        t.setMatrix(1.0, t.m12(), t.m13(), t.m21(), 1.0, t.m23(), t.m31(), t.m32(), t.m33());
+                        painter->setWorldTransform(t);
+                        if ((buffer.size() != ss || _dirty) && rasterDoc && !rasterDoc->isNull()) {
+                              buffer = QPixmap::fromImage(rasterDoc->scaled(ss, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                              _dirty = false;
+                              }
+                        if (buffer.isNull())
+                              emptyImage = true;
+                        else
+                              painter->drawPixmap(QPointF(0.0, 0.0), buffer);
+                        }
+                  painter->restore();
                   }
-            painter->restore();
             }
       if (emptyImage) {
             painter->setBrush(Qt::NoBrush);
@@ -391,19 +395,25 @@ void Image::read(XmlReader& e)
       qDebug("storePath <%s>", qPrintable(_storePath));
 
       QString path;
-      if (_linkPath.isEmpty() || !load(_linkPath)) {
-            // if could not load img from _linkPath, retrieve from store
+      bool    loaded = false;
+      // if a store path is given, attempt to get the image from the store
+      if (!_storePath.isEmpty()) {
             _storeItem = imageStore.getImage(_storePath);
             if (_storeItem) {
                   _storeItem->reference(this);
+                  loaded = true;
                   }
-            // if not in store, try to load from _storePath for backward compatibility
+            // if no image in store, attempt to load from path (for backward compatibility)
             else
-                  load(_storePath);
+                  loaded = load(_storePath);
             path = _storePath;
             }
-      else
+      // if no succes from store path, attempt loading from link path (for .mscx files)
+      if (!loaded) {
+            _linkIsValid = load(_linkPath);
             path = _linkPath;
+            }
+
       if (path.endsWith(".svg"))
             setImageType(IMAGE_SVG);
       else

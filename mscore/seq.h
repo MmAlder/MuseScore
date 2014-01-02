@@ -41,6 +41,7 @@ struct Channel;
 class ScoreView;
 class MasterSynthesizer;
 class Segment;
+enum class POS;
 
 //---------------------------------------------------------
 //   SeqMsg
@@ -95,6 +96,7 @@ class Seq : public QObject, public Sequencer {
       ScoreView* cv;
       bool running;                       // true if sequencer is available
       int state;                          // TRANSPORT_STOP, TRANSPORT_PLAY, TRANSPORT_STARTING=3
+      bool inCountIn;
 
       bool oggInit;
       bool playlistChanged;
@@ -109,11 +111,14 @@ class Seq : public QObject, public Sequencer {
       int peakTimer[2];
 
       EventMap events;                    // playlist
+      EventMap countInEvents;
 
       int playTime;                       // current play position in samples
+      int countInPlayTime;
       int endTick;
-      
+
       EventMap::const_iterator playPos;   // moved in real time thread
+      EventMap::const_iterator countInPlayPos;
       EventMap::const_iterator guiPos;    // moved in gui thread
       QList<const Note*> markedNotes;     // notes marked as sounding
 
@@ -129,10 +134,11 @@ class Seq : public QObject, public Sequencer {
       void setPos(int);
       void playEvent(const NPlayEvent&);
       void guiToSeq(const SeqMsg& msg);
-      void metronome(unsigned n, float* l);
+      void metronome(unsigned n, float* l, bool force);
       void seek(int utick, Segment* seg);
       void unmarkNotes();
       void updateSynthesizerState(int tick1, int tick2);
+      void addCountInClicks();
 
    private slots:
       void seqMessage(int msg);
@@ -146,6 +152,7 @@ class Seq : public QObject, public Sequencer {
       void stopNotes(int channel = -1);
       void start();
       void stop();
+      void setPos(POS, unsigned);
 
    signals:
       void started();

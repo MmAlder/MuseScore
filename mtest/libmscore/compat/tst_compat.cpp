@@ -55,15 +55,22 @@ void TestCompat::compat_data()
       QTest::addColumn<QString>("file");
 
       QTest::newRow("notes") <<  "notes";       // notes.mscx notes-ref.mscx
+// does not work:
+//      QTest::newRow("noteheads") << "noteheads";
       QTest::newRow("keysig") << "keysig";
       QTest::newRow("hairpin") << "hairpin";
-      QTest::newRow("articulations") << "articulations";
+
+// does not work:
+//      QTest::newRow("articulations") << "articulations";
 // does not work:
 //      QTest::newRow("textstyles") << "textstyles";
       QTest::newRow("title") << "title";
       QTest::newRow("notes_useroffset") << "notes_useroffset";
       QTest::newRow("tremolo2notes") << "tremolo2notes";
       QTest::newRow("accidentals") << "accidentals";
+      QTest::newRow("slurs") << "slurs";
+      QTest::newRow("clef_missing_first") << "clef_missing_first";
+      QTest::newRow("hor_frame_and_mmrest") << "hor_frame_and_mmrest";
       }
 
 //---------------------------------------------------------

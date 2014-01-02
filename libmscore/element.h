@@ -37,6 +37,7 @@ class MuseScoreView;
 class Segment;
 class TextStyle;
 class Element;
+enum class SymId;
 
 //---------------------------------------------------------
 //   ElementFlag
@@ -121,11 +122,19 @@ struct DropData {
 struct EditData {
       MuseScoreView* view;
       int curGrip;
+      QPointF startMove;
       QPointF delta;
       QPointF pos;
       bool hRaster;
       bool vRaster;
       };
+
+
+struct ElementName {
+      const char* name;
+      const char* userName;
+      ElementName(const char* _name, const char* _userName) : name(_name), userName(_userName) {}
+};
 
 //-------------------------------------------------------------------
 //    @@ Element
@@ -177,8 +186,9 @@ class Element : public QObject {
             ACCIDENTAL,
             STEM,             // list STEM before NOTE: notes in TAB might 'break' stems
             NOTE,             // and this requires stems to be drawn before notes
-            CLEF,
-            KEYSIG,
+            CLEF,             // elements from CLEF to TIMESIG need to be in the order
+            KEYSIG,           // in which they appear in a measure
+            AMBITUS,
             TIMESIG,
             REST,
             BREATH,
@@ -412,7 +422,7 @@ class Element : public QObject {
       virtual void write(Xml&) const;
       virtual void read(XmlReader&);
 
-      virtual QRectF drag(const EditData&);
+      virtual QRectF drag(EditData*);
       virtual void endDrag()                  {}
       virtual QLineF dragAnchor() const       { return QLineF(); }
 
@@ -454,6 +464,7 @@ class Element : public QObject {
 
       QColor color() const             { return _color; }
       QColor curColor() const;
+      QColor curColor(const Element* proxy) const;
       void setColor(const QColor& c)     { _color = c;    }
       void undoSetColor(const QColor& c);
 
@@ -552,6 +563,16 @@ class Element : public QObject {
       void undoPushProperty(P_ID);
 
       virtual void styleChanged() {}
+
+      void drawSymbol(SymId id, QPainter* p, const QPointF& o = QPointF()) const;
+      void drawSymbol(SymId id, QPainter* p, const QPointF& o, int n) const;
+      void drawSymbols(const QString&, QPainter* p, const QPointF& o = QPointF()) const;
+      qreal symHeight(SymId id) const;
+      qreal symWidth(SymId id) const;
+      QRectF symBbox(SymId id) const;
+      QRectF symBbox(const QString&) const;
+      QPointF symAttach(SymId id) const;
+      QString toTimeSigString(const QString& s) const;
       };
 
 //---------------------------------------------------------

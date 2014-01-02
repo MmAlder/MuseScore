@@ -713,6 +713,7 @@ static int readCapVoice(Score* score, CapVoice* cvoice, int staffIdx, int tick, 
                                           slur->setStartElement(cr1);
                                           slur->setEndElement(cr2);
                                           slur->setTrack(cr1->track());
+                                          slur->setTrack2(cr2->track());
                                           score->addElement(slur);
                                           }
                                     }
@@ -747,6 +748,7 @@ static int readCapVoice(Score* score, CapVoice* cvoice, int staffIdx, int tick, 
                               if (res) {
                                     Volta* volta = new Volta(score);
                                     volta->setTrack(track);
+                                    volta->setTrack2(track);
                                     // TODO also support endings such as "1 - 3"
                                     volta->setText(QString("%1.").arg(vo->to));
                                     volta->endings().append(vo->to);
@@ -991,7 +993,7 @@ void convertCapella(Score* score, Capella* cap, bool capxMode)
             Measure* m = score->tick2measure(mtick-1);
             if (m && !m->lineBreak()) {
                   LayoutBreak* lb = new LayoutBreak(score);
-                  lb->setLayoutBreakType(LAYOUT_BREAK_LINE);
+                  lb->setLayoutBreakType(LayoutBreak::LINE);
                   lb->setTrack(-1);       // this are system elements
                   m->add(lb);
                   }

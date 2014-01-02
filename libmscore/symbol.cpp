@@ -29,16 +29,18 @@ namespace Ms {
 Symbol::Symbol(Score* s)
    : BSymbol(s)
       {
-      _sym = sharpSym;        // arbitrary valid default
+      _sym = SymId::accidentalSharp;        // arbitrary valid default
       setZ(SYMBOL * 100);
       }
 
+#if 0
 Symbol::Symbol(Score* s, SymId sy)
    : BSymbol(s)
       {
       _sym = sy;
       setZ(SYMBOL * 100);
       }
+#endif
 
 Symbol::Symbol(const Symbol& s)
    : BSymbol(s)
@@ -64,15 +66,11 @@ void Symbol::setAbove(bool val)
 
 void Symbol::layout()
       {
-//      qreal m = parent() ? parent()->mag() : 1.0;
-//      if (_small)
-//            m *= score()->styleD(ST_smallNoteMag);
-//      setMag(m);
       foreach(Element* e, leafs())
             e->layout();
       ElementLayout::layout(this);
       BSymbol::layout();
-      setbbox(symbols[score()->symIdx()][_sym].bbox(magS()));
+      setbbox(_scoreFont ? _scoreFont->bbox(_sym, magS()) : symBbox(_sym));
       }
 
 //---------------------------------------------------------
@@ -83,7 +81,10 @@ void Symbol::draw(QPainter* p) const
       {
       if (type() != NOTEDOT || !staff()->isTabStaff()) {
             p->setPen(curColor());
-            symbols[score()->symIdx()][_sym].draw(p, magS());
+            if (_scoreFont)
+                  _scoreFont->draw(_sym, p, magS(), QPointF());
+            else
+                  drawSymbol(_sym, p);
             }
       }
 
@@ -95,6 +96,8 @@ void Symbol::write(Xml& xml) const
       {
       xml.stag(name());
       xml.tag("name", Sym::id2name(_sym));
+      if (_scoreFont)
+            xml.tag("font", _scoreFont->name());
       BSymbol::writeProperties(xml);
       xml.etag();
       }
@@ -106,8 +109,6 @@ void Symbol::write(Xml& xml) const
 void Symbol::read(XmlReader& e)
       {
       QPointF pos;
-      SymId s = noSym;
-
       while (e.readNextStartElement()) {
             const QStringRef& tag(e.name());
             if (tag == "name") {
@@ -116,18 +117,26 @@ void Symbol::read(XmlReader& e)
                         val = "accordion.accDot";
                   else if (val == "acc old ee")
                         val = "accordion.accOldEE";
-                  s = Sym::name2id(val);
-                  if (s == noSym) {
-                        // if symbol name not found, fall back to mnames
-                        s = Sym::userName2id(val);
-                        if (s == noSym) {
-                              qDebug("unknown symbol <%s> (%d symbols), falling back to default symbol",
-                                 qPrintable(val), symbols[0].size());
-                              // set a default symbol, or layout() will crash
-                              s = s1miHeadSym;
+                  SymId symId = Sym::name2id(val);
+                  if (val != "noSym") {
+                        if (symId == SymId::noSym) {
+                              // if symbol name not found, fall back to user names
+                              // TODO : does it make sense? user names are probably localized
+                              symId = Sym::userName2id(val);
+                              // if not found, look into old names
+                              if (symId == SymId::noSym)
+                                    symId = Sym::oldName2id(val);
+                              if (symId == SymId::noSym) {
+                                    qDebug("unknown symbol <%s>, falling back to default symbol", qPrintable(val));
+                                    // set a default symbol, or layout() will crash
+                                    symId = SymId::noteheadBlack;
+                                    }
                               }
                         }
+                  setSym(symId);
                   }
+            else if (tag == "font")
+                  _scoreFont = ScoreFont::fontFactory(e.readElementText());
             else if (tag == "Symbol") {
                   Symbol* s = new Symbol(score());
                   s->read(e);
@@ -136,7 +145,7 @@ void Symbol::read(XmlReader& e)
                   }
             else if (tag == "Image") {
                   Image* image = new Image(score());
-                  QString path;
+//                  QString path;
                   image->read(e);
                   add(image);
                   }
@@ -145,10 +154,7 @@ void Symbol::read(XmlReader& e)
             else if (!BSymbol::readProperties(e))
                   e.unknown();
             }
-      if (s == noSym)
-            qDebug("unknown symbol");
       setPos(pos);
-      setSym(s);
       }
 
 //---------------------------------------------------------

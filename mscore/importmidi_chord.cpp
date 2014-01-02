@@ -4,6 +4,8 @@
 #include "importmidi_clef.h"
 #include "libmscore/mscore.h"
 
+#include <set>
+
 
 namespace Ms {
 namespace MChord {
@@ -30,7 +32,7 @@ int findAveragePitch(const QList<MidiNote> &notes)
       int avgPitch = 0;
       for (const auto &note: notes)
             avgPitch += note.pitch;
-      return avgPitch / notes.size();
+      return notes.size() ? avgPitch / notes.size() : 0;
       }
 
 int findAveragePitch(const std::map<ReducedFraction, MidiChord>::const_iterator &startChordIt,
@@ -59,11 +61,11 @@ void removeOverlappingNotes(std::multimap<int, MTrack> &tracks)
                   auto &firstChord = it->second;
                   const auto &firstOnTime = it->first;
                   for (auto &note1: firstChord.notes) {
-                        auto ii = it;
-                        ++ii;
-                        bool overlapFound = false;
+                        auto ii = std::next(it);
                         for (; ii != chords.end(); ++ii) {
                               auto &secondChord = ii->second;
+                              if (firstChord.voice != secondChord.voice)
+                                    continue;
                               const auto &secondOnTime = ii->first;
                               for (auto &note2: secondChord.notes) {
                                     if (note2.pitch != note1.pitch)
@@ -74,11 +76,9 @@ void removeOverlappingNotes(std::multimap<int, MTrack> &tracks)
                                            firstOnTime.ticks(), note1.len.ticks(),
                                            secondOnTime.ticks(), note2.len.ticks());
                                     note1.len = secondOnTime - firstOnTime;
-                                    overlapFound = true;
+                                    ii = std::prev(chords.end());
                                     break;
                                     }
-                              if (overlapFound)
-                                    break;
                               }
                         if (note1.len <= ReducedFraction(0, 1)) {
                               qDebug("Midi import: duration <= 0: drop note at %d",
@@ -90,6 +90,22 @@ void removeOverlappingNotes(std::multimap<int, MTrack> &tracks)
             }
       }
 
+//----------------------------------------------------------------------------------------
+// DEBUG function
+
+bool areOnTimeValuesDifferent(const std::multimap<ReducedFraction, MidiChord> &chords)
+      {
+      std::set<ReducedFraction> onTimes;
+      for (const auto &chordEvent: chords) {
+            if (onTimes.find(chordEvent.first) == onTimes.end())
+                  onTimes.insert(chordEvent.first);
+            else
+                  return false;
+            }
+      return true;
+      }
+
+//----------------------------------------------------------------------------------------
 
 // based on quickthresh algorithm
 //
@@ -143,8 +159,7 @@ void collectChords(std::multimap<int, MTrack> &tracks)
                               tol = note.len;
                         if (end - beg >= tol) {
                               // add current note to the previous chord
-                              auto prev = it;
-                              --prev;
+                              auto prev = std::prev(it);
                               prev->second.notes.push_back(note);
                               if (it->first >= startTime + curThreshTime - fudgeTime)
                                     curThreshTime += threshExtTime;
@@ -162,6 +177,10 @@ void collectChords(std::multimap<int, MTrack> &tracks)
                         }
                   ++it;
                   }
+
+            Q_ASSERT_X(areOnTimeValuesDifferent(chords),
+                       "MChord: collectChords", "onTime values of chords are equal "
+                                                "but should be different");
             }
       }
 
@@ -245,6 +264,33 @@ ReducedFraction findMinDuration(const QList<MidiChord> &midiChords,
                   }
             }
       return len;
+      }
+
+void mergeChordsWithEqualOnTimeAndVoice(std::multimap<int, MTrack> &tracks)
+      {
+      for (auto &track: tracks) {
+            auto &chords = track.second.chords;
+                        // the key is pair<onTime, voice>
+            std::map<std::pair<ReducedFraction, int>,
+                     std::multimap<ReducedFraction, MidiChord>::iterator> onTimes;
+
+            for (auto it = chords.begin(); it != chords.end(); ) {
+                  const auto &onTime = it->first;
+                  const int voice = it->second.voice;
+                  auto fit = onTimes.find({onTime, voice});
+                  if (fit == onTimes.end()) {
+                        onTimes.insert({{onTime, voice}, it});
+                        }
+                  else {
+                        auto &oldNotes = fit->second->second.notes;
+                        auto &newNotes = it->second.notes;
+                        oldNotes.append(newNotes);
+                        it = chords.erase(it);
+                        continue;
+                        }
+                  ++it;
+                  }
+            }
       }
 
 } // namespace MChord

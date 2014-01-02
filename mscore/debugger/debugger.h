@@ -87,6 +87,7 @@ class Debugger : public QDialog, public Ui::DebuggerBase {
 //      void addSymbol(ElementItem* parent, BSymbol* bs);
       void updateElement(Element*);
       virtual void showEvent(QShowEvent*);
+      void addMeasure(ElementItem* mi, Measure* measure);
 
    protected:
       Score* cs;
@@ -191,6 +192,7 @@ class MeasureView : public ShowElementBase {
       void elementClicked(QTreeWidgetItem* item);
       void nextClicked();
       void prevClicked();
+      void mmRestClicked();
 
    public:
       MeasureView();
@@ -742,7 +744,8 @@ class SystemView : public ShowElementBase {
       Ui::SystemBase mb;
 
    private slots:
-      void elementClicked(QTreeWidgetItem* item);
+      void elementClicked(QTreeWidgetItem*);
+      void measureClicked(QListWidgetItem*);
 
    public:
       SystemView();

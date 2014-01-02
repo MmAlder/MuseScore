@@ -51,11 +51,9 @@
 #include <QSharedData>
 
 #include <QAtomicInt>
-#include <QStaticText>
 #include <QErrorMessage>
 
 #include <QPainterPath>
-#include <QBitmap>
 #include <QPixmap>
 #include <QPainter>
 #include <QKeyEvent>
@@ -69,7 +67,6 @@
 #include <QAbstractTextDocumentLayout>
 #include <QTextBlock>
 #include <QTextList>
-#include <QTextFrameFormat>
 #include <QClipboard>
 #include <QPlainTextEdit>
 #include <QStyledItemDelegate>
@@ -83,7 +80,6 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QToolBar>
-#include <QWhatsThis>
 #include <QTreeWidget>
 #include <QFileDialog>
 #include <QPrintDialog>
@@ -124,8 +120,6 @@
 #include <QStatusBar>
 #include <QStylePainter>
 #include <QStyleOptionButton>
-#include <QStyleFactory>
-#include <QFileSystemModel>
 #include <QHeaderView>
 #include <QUndoGroup>
 #include <QUndoStack>
@@ -140,6 +134,8 @@
 #include <QSpacerItem>
 #include <QGraphicsSceneMouseEvent>
 #include <QtConcurrent>
+#include <QScreen>
+#include <QGestureEvent>
 
 #include <QSvgRenderer>
 #include <QSvgGenerator>
@@ -148,6 +144,7 @@
 #include <QNetworkReply>
 #include <QNetworkCookie>
 #include <QNetworkCookieJar>
+#include <QNetworkProxyFactory>
 #include <QHostAddress>
 #include <QUdpSocket>
 

@@ -45,6 +45,8 @@ class TestMeasure : public QObject, public MTest
       void insertMeasureMiddle();
       void insertMeasureBegin();
       void insertMeasureEnd();
+      void insertBfClefChange();
+      void insertBfKeyChange();
       void spanner_a();
       void spanner_b();
       void spanner_A();
@@ -120,12 +122,53 @@ void TestMeasure::insertMeasureEnd()
       }
 
 //---------------------------------------------------------
-//   minWidth
+///   insertBfClefChange
 //---------------------------------------------------------
 
+void TestMeasure::insertBfClefChange()
+      {
+      Score* score = readScore(DIR + "measure-insert_bf_clef.mscx");
+      score->doLayout();
+      // 4th measure
+      Measure* m = score->firstMeasure()->nextMeasure();
+      m = m->nextMeasure()->nextMeasure();
+      score->startCmd();
+      score->insertMeasure(Element::MEASURE, m);
+      score->endCmd();
+      QVERIFY(saveCompareScore(score, "measure-insert_bf_clef.mscx", DIR + "measure-insert_bf_clef-ref.mscx"));
+      score->undo()->undo();
+      score->doLayout();
+      QVERIFY(saveCompareScore(score, "measure-insert_bf_clef_undo.mscx", DIR + "measure-insert_bf_clef.mscx"));
+      delete score;
+      }
+
+
+//---------------------------------------------------------
+///   insertBfKeyChange
+//---------------------------------------------------------
+
+void TestMeasure::insertBfKeyChange()
+      {
+      Score* score = readScore(DIR + "measure-insert_bf_key.mscx");
+      score->doLayout();
+      // 4th measure
+      Measure* m = score->firstMeasure()->nextMeasure();
+      m = m->nextMeasure()->nextMeasure();
+      score->startCmd();
+      score->insertMeasure(Element::MEASURE, m);
+      score->endCmd();
+      QVERIFY(saveCompareScore(score, "measure-insert_bf_key.mscx", DIR + "measure-insert_bf_key-ref.mscx"));
+      score->undo()->undo();
+      score->doLayout();
+      QVERIFY(saveCompareScore(score, "measure-insert_bf_key_undo.mscx", DIR + "measure-insert_bf_key.mscx"));
+      delete score;
+      }
+
+//---------------------------------------------------------
+//   minWidth
+//---------------------------------------------------------
 void TestMeasure::minWidth()
       {
-#if 0 //TODO
       Score* score = readScore(DIR + "measure-2.mscx");
       score->doLayout();
       int n = score->systems()->size();
@@ -140,8 +183,8 @@ void TestMeasure::minWidth()
 
       score->doLayout();
 
-      //QCOMPARE(mw1, m1->minWidth1());
-      //QCOMPARE(mw2, m2->minWidth1());
+      QCOMPARE(mw1, m1->minWidth1());
+      QCOMPARE(mw2, m2->minWidth1());
 
       // after second layout nothing should be changed:
       for (int i = 0; i < n; ++i) {
@@ -149,9 +192,7 @@ void TestMeasure::minWidth()
                measuresSystem[i], score->systems()->at(i)->measures().size());
             QCOMPARE(measuresSystem[i], score->systems()->at(i)->measures().size());
             }
-#endif
       }
-
 //---------------------------------------------------------
 ///   spanner_a
 //
@@ -292,6 +333,7 @@ void TestMeasure::spanner_D()
       QVERIFY(saveCompareScore(score, "measure-9.mscx", DIR + "measure-9-ref.mscx"));
       delete score;
       }
+
 
 QTEST_MAIN(TestMeasure)
 

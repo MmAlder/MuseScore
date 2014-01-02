@@ -296,7 +296,11 @@ void Text::layout1()
                   }
             if (e->type() == SEGMENT) {
                   Segment* s = static_cast<Segment*>(e);
-                  rypos() += s->measure()->system()->staff(staffIdx())->y();
+                  System* system = s->measure()->system();
+                  if (system) {
+                        SysStaff* sstaff = system->staff(staffIdx());
+                        rypos() += sstaff->y();
+                        }
                   }
             }
 
@@ -456,7 +460,7 @@ bool Text::readProperties(XmlReader& e)
                         case 11: i = TEXT_STYLE_INSTRUMENT_EXCERPT; break;
 
                         case 12: i = TEXT_STYLE_DYNAMICS;  break;
-                        case 13: i = TEXT_STYLE_TECHNIK;   break;
+                        case 13: i = TEXT_STYLE_TECHNIQUE;   break;
                         case 14: i = TEXT_STYLE_TEMPO;     break;
                         case 15: i = TEXT_STYLE_METRONOME; break;
                         case 16: i = TEXT_STYLE_FOOTER;    break;  // TEXT_STYLE_COPYRIGHT
